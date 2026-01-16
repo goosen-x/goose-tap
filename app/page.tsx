@@ -11,7 +11,7 @@ interface TapEffect {
 }
 
 export default function Home() {
-  const { user, colorScheme } = useTelegram();
+  const { user, webApp } = useTelegram();
   const [coins, setCoins] = useState(0);
   const [energy, setEnergy] = useState(1000);
   const [maxEnergy] = useState(1000);
@@ -40,6 +40,9 @@ export default function Home() {
   const handleTap = useCallback(
     (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
       if (energy <= 0) return;
+
+      // Haptic feedback
+      webApp?.HapticFeedback?.impactOccurred('light');
 
       const rect = e.currentTarget.getBoundingClientRect();
       let clientX: number, clientY: number;
@@ -71,7 +74,7 @@ export default function Home() {
         setTapEffects((prev) => prev.filter((effect) => effect.id !== newEffect.id));
       }, 800);
     },
-    [energy, coinsPerTap]
+    [energy, coinsPerTap, webApp]
   );
 
   const formatNumber = (num: number): string => {
