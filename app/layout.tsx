@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
+import { GameProvider } from "@/components/GameProvider";
+import { BottomNav } from "@/components/BottomNav";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -35,7 +37,12 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
-        {children}
+        <GameProvider>
+          <div className="flex h-screen flex-col overflow-hidden">
+            <div className="flex-1 overflow-auto">{children}</div>
+            <BottomNav />
+          </div>
+        </GameProvider>
       </body>
     </html>
   );

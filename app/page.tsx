@@ -2,6 +2,9 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTelegram } from '@/hooks/useTelegram';
+import { useGame } from '@/components/GameProvider';
+import { formatNumber } from '@/lib/storage';
+import { Progress } from '@/components/ui/progress';
 
 interface TapEffect {
   id: number;
@@ -12,30 +15,15 @@ interface TapEffect {
 
 export default function Home() {
   const { user, webApp } = useTelegram();
-  const [coins, setCoins] = useState(0);
-  const [energy, setEnergy] = useState(1000);
-  const [maxEnergy] = useState(1000);
-  const [coinsPerTap] = useState(1);
-  const [level, setLevel] = useState(1);
+  const { coins, energy, maxEnergy, coinsPerTap, coinsPerHour, level, tap, isLoaded } = useGame();
   const [tapEffects, setTapEffects] = useState<TapEffect[]>([]);
   const [isPressed, setIsPressed] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const tapIdRef = useRef(0);
 
-  // Restore energy over time
   useEffect(() => {
-    const interval = setInterval(() => {
-      setEnergy((prev) => Math.min(prev + 1, maxEnergy));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [maxEnergy]);
-
-  // Level up logic
-  useEffect(() => {
-    const newLevel = Math.floor(coins / 10000) + 1;
-    if (newLevel > level) {
-      setLevel(newLevel);
-    }
-  }, [coins, level]);
+    setIsMounted(true);
+  }, []);
 
   const handleTap = useCallback(
     (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
@@ -43,6 +31,9 @@ export default function Home() {
 
       // Haptic feedback
       webApp?.HapticFeedback?.impactOccurred('light');
+
+      // Perform tap action
+      tap();
 
       const rect = e.currentTarget.getBoundingClientRect();
       let clientX: number, clientY: number;
@@ -58,9 +49,6 @@ export default function Home() {
       const x = clientX - rect.left;
       const y = clientY - rect.top;
 
-      setCoins((prev) => prev + coinsPerTap);
-      setEnergy((prev) => Math.max(prev - 1, 0));
-
       const newEffect: TapEffect = {
         id: tapIdRef.current++,
         x,
@@ -74,23 +62,26 @@ export default function Home() {
         setTapEffects((prev) => prev.filter((effect) => effect.id !== newEffect.id));
       }, 800);
     },
-    [energy, coinsPerTap, webApp]
+    [energy, coinsPerTap, webApp, tap]
   );
-
-  const formatNumber = (num: number): string => {
-    if (num >= 1_000_000) {
-      return (num / 1_000_000).toFixed(1) + 'M';
-    }
-    if (num >= 1_000) {
-      return (num / 1_000).toFixed(1) + 'K';
-    }
-    return num.toLocaleString();
-  };
 
   const energyPercentage = (energy / maxEnergy) * 100;
 
+  // Show loading state while game state is being loaded
+  // Use isMounted to avoid hydration mismatch
+  if (!isMounted || !isLoaded) {
+    return (
+      <div className="flex flex-1 items-center justify-center bg-gradient-to-b from-amber-50 to-orange-100 dark:from-zinc-900 dark:to-zinc-800">
+        <div className="text-center">
+          <div className="mb-4 text-6xl">🪿</div>
+          <p className="text-zinc-600 dark:text-zinc-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-b from-amber-50 to-orange-100 dark:from-zinc-900 dark:to-zinc-800">
+    <div className="flex flex-1 flex-col bg-gradient-to-b from-amber-50 to-orange-100 dark:from-zinc-900 dark:to-zinc-800">
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-2">
@@ -104,11 +95,18 @@ export default function Home() {
             <p className="text-xs text-zinc-500 dark:text-zinc-400">Level {level}</p>
           </div>
         </div>
-        <div className="flex items-center gap-1 rounded-full bg-amber-500/20 px-3 py-1.5">
-          <span className="text-lg">🪙</span>
-          <span className="font-bold text-amber-700 dark:text-amber-400">
-            {formatNumber(coins)}
-          </span>
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-1 rounded-full bg-amber-500/20 px-3 py-1.5">
+            <span className="text-lg">🪙</span>
+            <span className="font-bold text-amber-700 dark:text-amber-400">
+              {formatNumber(coins)}
+            </span>
+          </div>
+          {coinsPerHour > 0 && (
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              +{formatNumber(coinsPerHour)}/hr
+            </p>
+          )}
         </div>
       </header>
 
@@ -168,42 +166,8 @@ export default function Home() {
           </div>
           <span>+{coinsPerTap}/tap</span>
         </div>
-        <div className="mt-1 h-3 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all duration-300"
-            style={{ width: `${energyPercentage}%` }}
-          />
-        </div>
+        <Progress value={energyPercentage} className="mt-1 h-3" />
       </div>
-
-      {/* Bottom navigation */}
-      <nav className="flex items-center justify-around border-t border-zinc-200 bg-white/80 px-4 py-3 backdrop-blur-sm dark:border-zinc-700 dark:bg-zinc-900/80">
-        <NavItem icon="🏠" label="Home" active />
-        <NavItem icon="📋" label="Tasks" />
-        <NavItem icon="👥" label="Friends" />
-        <NavItem icon="💰" label="Earn" />
-      </nav>
     </div>
-  );
-}
-
-function NavItem({
-  icon,
-  label,
-  active = false,
-}: {
-  icon: string;
-  label: string;
-  active?: boolean;
-}) {
-  return (
-    <button
-      className={`flex cursor-pointer flex-col items-center gap-0.5 ${
-        active ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-500 dark:text-zinc-400'
-      }`}
-    >
-      <span className="text-xl">{icon}</span>
-      <span className="text-xs">{label}</span>
-    </button>
   );
 }

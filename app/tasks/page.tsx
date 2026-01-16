@@ -1,0 +1,87 @@
+'use client';
+
+import { useGame } from '@/components/GameProvider';
+import { TaskCard } from '@/components/TaskCard';
+import { TASKS } from '@/types/game';
+import { formatNumber } from '@/lib/storage';
+import { useTelegram } from '@/hooks/useTelegram';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+
+type FilterType = 'all' | 'daily' | 'social';
+
+export default function TasksPage() {
+  const { coins, completeTask, isTaskCompleted, getTaskProgress } = useGame();
+  const { webApp } = useTelegram();
+
+  const handleAction = (action?: string) => {
+    if (!action) return;
+
+    if (webApp) {
+      webApp.openLink(action);
+    } else {
+      window.open(action, '_blank');
+    }
+  };
+
+  const getFilteredTasks = (filter: FilterType) => {
+    return TASKS.filter((task) => {
+      if (filter === 'all') return true;
+      if (filter === 'daily') return task.type === 'daily' || task.type === 'referral';
+      return task.type === 'social';
+    });
+  };
+
+  return (
+    <div className="flex flex-1 flex-col bg-gradient-to-b from-amber-50 to-orange-100 dark:from-zinc-900 dark:to-zinc-800">
+      {/* Header */}
+      <header className="px-4 py-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">
+            Tasks
+          </h1>
+          <div className="flex items-center gap-1 rounded-full bg-primary/20 px-3 py-1.5">
+            <span className="text-lg">🪙</span>
+            <span className="font-bold text-primary">
+              {formatNumber(coins)}
+            </span>
+          </div>
+        </div>
+      </header>
+
+      {/* Tabs and content */}
+      <Tabs defaultValue="all" className="flex flex-1 flex-col px-4">
+        <TabsList className="w-full">
+          <TabsTrigger value="all" className="flex-1 cursor-pointer">All</TabsTrigger>
+          <TabsTrigger value="daily" className="flex-1 cursor-pointer">Daily</TabsTrigger>
+          <TabsTrigger value="social" className="flex-1 cursor-pointer">Social</TabsTrigger>
+        </TabsList>
+
+        {/* Task list */}
+        <div className="flex-1 pb-4 pt-4">
+          {(['all', 'daily', 'social'] as FilterType[]).map((filter) => (
+            <TabsContent key={filter} value={filter} className="mt-0">
+              <div className="flex flex-col gap-3">
+                {getFilteredTasks(filter).map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    isCompleted={isTaskCompleted(task.id)}
+                    progress={task.requirement ? getTaskProgress(task.id) : undefined}
+                    onComplete={() => completeTask(task.id)}
+                    onAction={() => handleAction(task.action)}
+                  />
+                ))}
+              </div>
+
+              {getFilteredTasks(filter).length === 0 && (
+                <div className="mt-12 text-center text-muted-foreground">
+                  No tasks available
+                </div>
+              )}
+            </TabsContent>
+          ))}
+        </div>
+      </Tabs>
+    </div>
+  );
+}
