@@ -3,6 +3,15 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Telegram theme variables with fallbacks */
+  --tg-theme-bg-color: var(--tg-theme-bg-color, #ffffff);
+  --tg-theme-text-color: var(--tg-theme-text-color, #000000);
+  --tg-theme-hint-color: var(--tg-theme-hint-color, #999999);
+  --tg-theme-link-color: var(--tg-theme-link-color, #2481cc);
+  --tg-theme-button-color: var(--tg-theme-button-color, #5288c1);
+  --tg-theme-button-text-color: var(--tg-theme-button-text-color, #ffffff);
+  --tg-theme-secondary-bg-color: var(--tg-theme-secondary-bg-color, #efeff3);
 }
 
 @theme inline {
@@ -16,6 +25,15 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+
+    /* Telegram dark theme fallbacks */
+    --tg-theme-bg-color: var(--tg-theme-bg-color, #1c1c1d);
+    --tg-theme-text-color: var(--tg-theme-text-color, #ffffff);
+    --tg-theme-hint-color: var(--tg-theme-hint-color, #7d7d7d);
+    --tg-theme-link-color: var(--tg-theme-link-color, #5288c1);
+    --tg-theme-button-color: var(--tg-theme-button-color, #5288c1);
+    --tg-theme-button-text-color: var(--tg-theme-button-text-color, #ffffff);
+    --tg-theme-secondary-bg-color: var(--tg-theme-secondary-bg-color, #2c2c2d);
   }
 }
 
