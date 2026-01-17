@@ -76,6 +76,8 @@ export function validateInitData(initData: string): ValidationResult {
         paramsCount: Array.from(params.entries()).length,
         hasUser: !!params.get('user'),
         hasAuthDate: !!params.get('auth_date'),
+        sortedParams: sortedParams.slice(0, 200) + '...',
+        tokenLength: botToken.length,
       });
       return { valid: false, error: 'Invalid hash' };
     }
