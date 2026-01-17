@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useGame } from '@/components/GameProvider';
 import { FriendCard } from '@/components/FriendCard';
 import { formatNumber } from '@/lib/storage';
@@ -7,7 +8,8 @@ import { useTelegram } from '@/hooks/useTelegram';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { SlidingNumber } from '@/components/ui/sliding-number';
-import { Users, Gift, Gem, Copy, UserPlus } from 'lucide-react';
+import { Users, Gift, Gem, Copy, UserPlus, Check } from 'lucide-react';
+import { toast } from 'sonner';
 
 const REFERRAL_BONUS = 10000;
 const EARNINGS_PERCENTAGE = 10;
@@ -15,6 +17,7 @@ const EARNINGS_PERCENTAGE = 10;
 export default function FriendsPage() {
   const { referrals, isLoaded } = useGame();
   const { webApp, user, hapticNotification } = useTelegram();
+  const [copied, setCopied] = useState(false);
 
   const totalEarned = referrals.length * REFERRAL_BONUS;
 
@@ -52,12 +55,22 @@ export default function FriendsPage() {
     }
   };
 
-  const handleCopyLink = () => {
+  const handleCopyLink = async () => {
     const userId = user?.id || 'demo';
     const referralLink = `https://t.me/goosetap_bot?startapp=ref_${userId}`;
 
-    navigator.clipboard?.writeText(referralLink);
-    hapticNotification('success');
+    try {
+      await navigator.clipboard.writeText(referralLink);
+      setCopied(true);
+      hapticNotification('success');
+      toast.success('Link copied!');
+
+      // Reset icon after 2 seconds
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('Failed to copy');
+      hapticNotification('error');
+    }
   };
 
   return (
@@ -85,7 +98,7 @@ export default function FriendsPage() {
             Invite Friend
           </Button>
           <Button onClick={handleCopyLink} variant="outline" size="icon" className="cursor-pointer">
-            <Copy className="h-4 w-4" />
+            {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
           </Button>
         </div>
       </div>
