@@ -95,15 +95,23 @@ export function SlidingNumber({
     Math.pow(10, integerDigits.length - i - 1)
   );
 
+  // Calculate positions where spaces should be inserted (every 3 digits from right)
+  const getSpaceBefore = (index: number) => {
+    const posFromRight = integerDigits.length - index;
+    return posFromRight > 1 && posFromRight % 3 === 1;
+  };
+
   return (
     <div className='flex items-center'>
       {value < 0 && '-'}
       {integerDigits.map((_, index) => (
-        <Digit
-          key={`pos-${integerPlaces[index]}`}
-          value={integerValue}
-          place={integerPlaces[index]}
-        />
+        <span key={`digit-${index}`} className="flex items-center">
+          {getSpaceBefore(index) && <span className="w-[0.25em]" />}
+          <Digit
+            value={integerValue}
+            place={integerPlaces[index]}
+          />
+        </span>
       ))}
       {decimalPart && (
         <>
