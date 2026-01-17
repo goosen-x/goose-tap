@@ -570,11 +570,14 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     setState(prev => {
       const newState = { ...prev, ...updates };
       saveGameState(newState);
-      if (initDataRef.current) {
-        saveGame(initDataRef.current, newState).catch(console.error);
-      }
       return newState;
     });
+    // Save to server after state update (outside setState callback)
+    setTimeout(() => {
+      if (initDataRef.current) {
+        saveGame(initDataRef.current, stateRef.current).catch(console.error);
+      }
+    }, 0);
   }, []);
 
   // Derived values - memoized to prevent recalculation on every render

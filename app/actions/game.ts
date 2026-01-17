@@ -157,6 +157,16 @@ export async function loadGame(initData: string): Promise<LoadGameResult> {
       lastOfflineEarnings: Date.now(),
     }
 
+    // Persist to DB so subsequent loads don't recalculate same earnings
+    if (offlineEarnings > 0 || restoredEnergy !== dbUser.energy) {
+      await updateUserState(user.id, {
+        coins: state.coins,
+        energy: state.energy,
+        lastEnergyUpdate: state.lastEnergyUpdate,
+        lastOfflineEarnings: state.lastOfflineEarnings,
+      })
+    }
+
     return {
       success: true,
       state,

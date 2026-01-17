@@ -22,6 +22,7 @@ interface WelcomeBackModalProps {
 
 const MIN_EARNINGS_THRESHOLD = 10;
 const MIN_OFFLINE_MINUTES = 5;
+const SESSION_KEY = 'welcome_back_shown';
 
 export function WelcomeBackModal({ earnings, offlineMinutes, coinsPerHour }: WelcomeBackModalProps) {
   const [open, setOpen] = useState(false);
@@ -29,9 +30,27 @@ export function WelcomeBackModal({ earnings, offlineMinutes, coinsPerHour }: Wel
 
   const shouldShow = earnings >= MIN_EARNINGS_THRESHOLD && offlineMinutes >= MIN_OFFLINE_MINUTES;
 
+  // Clear session flag when user leaves the page (so modal shows on real return)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        sessionStorage.removeItem(SESSION_KEY);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
   useEffect(() => {
     if (shouldShow) {
+      // Check if already shown in this session (prevents showing on HMR)
+      const alreadyShown = sessionStorage.getItem(SESSION_KEY);
+      if (alreadyShown) return;
+
       setOpen(true);
+      sessionStorage.setItem(SESSION_KEY, 'true');
+
       // Animate the number after modal opens
       const timer = setTimeout(() => {
         setDisplayEarnings(earnings);
