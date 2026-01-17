@@ -6,11 +6,11 @@ import { formatNumber } from '@/lib/storage';
 import { useTelegram } from '@/hooks/useTelegram';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { SlidingNumber } from '@/components/ui/sliding-number';
-import { Users, Gift, Gem, Copy, UserPlus, Check, TrendingUp, User2 } from 'lucide-react';
+import { Users, Copy, UserPlus, Check, ChevronDown, ChevronRight, Coins } from 'lucide-react';
 import { toast } from 'sonner';
 import { REFERRAL_BONUSES, REFERRAL_PERCENTAGES } from '@/types/game';
+import { cn } from '@/lib/utils';
 
 interface ReferralInfo {
   telegramId: number;
@@ -31,57 +31,147 @@ const TIER_CONFIG = {
     label: 'Friends',
     bonus: REFERRAL_BONUSES.tier1,
     percentage: REFERRAL_PERCENTAGES.tier1 * 100,
-    color: 'text-green-500',
-    bgColor: 'bg-green-500/10',
   },
   tier2: {
     label: 'Level 2',
     bonus: REFERRAL_BONUSES.tier2,
     percentage: REFERRAL_PERCENTAGES.tier2 * 100,
-    color: 'text-blue-500',
-    bgColor: 'bg-blue-500/10',
   },
   tier3: {
     label: 'Level 3',
     bonus: REFERRAL_BONUSES.tier3,
     percentage: REFERRAL_PERCENTAGES.tier3 * 100,
-    color: 'text-purple-500',
-    bgColor: 'bg-purple-500/10',
   },
 };
-
-function ReferralCard({ referral }: { referral: ReferralInfo }) {
-  const joinedDate = new Date(referral.joinedAt);
-  const timeAgo = getTimeAgo(joinedDate);
-
-  return (
-    <Card className="p-3 flex items-center gap-3">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
-        <User2 className="h-5 w-5 text-muted-foreground" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-medium truncate">
-          {referral.firstName || referral.username || 'Anonymous'}
-        </p>
-        {referral.username && (
-          <p className="text-xs text-muted-foreground truncate">@{referral.username}</p>
-        )}
-      </div>
-      <span className="text-xs text-muted-foreground">{timeAgo}</span>
-    </Card>
-  );
-}
 
 function getTimeAgo(date: Date): string {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays}d ago`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
-  return `${Math.floor(diffDays / 30)}mo ago`;
+  if (diffDays === 0) return 'today';
+  if (diffDays === 1) return '1d';
+  if (diffDays < 7) return `${diffDays}d`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w`;
+  return `${Math.floor(diffDays / 30)}mo`;
+}
+
+function AvatarStack({ count, max = 5 }: { count: number; max?: number }) {
+  const displayed = Math.min(count, max);
+  const remaining = count - displayed;
+
+  if (count === 0) return null;
+
+  return (
+    <div className="flex items-center">
+      <div className="flex -space-x-2">
+        {Array.from({ length: displayed }).map((_, i) => (
+          <div
+            key={i}
+            className="w-8 h-8 rounded-full bg-secondary border-2 border-background flex items-center justify-center"
+          >
+            <Users className="w-3.5 h-3.5 text-muted-foreground" />
+          </div>
+        ))}
+      </div>
+      {remaining > 0 && (
+        <span className="ml-2 text-sm text-muted-foreground">+{remaining}</span>
+      )}
+    </div>
+  );
+}
+
+function ReferralRow({ referral }: { referral: ReferralInfo }) {
+  const timeAgo = getTimeAgo(new Date(referral.joinedAt));
+
+  return (
+    <div className="flex items-center gap-3 py-2 px-3">
+      <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
+        <Users className="w-4 h-4 text-muted-foreground" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate">
+          {referral.firstName || 'Anonymous'}
+        </p>
+        {referral.username && (
+          <p className="text-xs text-muted-foreground truncate">@{referral.username}</p>
+        )}
+      </div>
+      <span className="text-xs text-muted-foreground shrink-0">{timeAgo}</span>
+    </div>
+  );
+}
+
+function TierSection({
+  tier,
+  data,
+  earnings,
+  isExpanded,
+  onToggle,
+}: {
+  tier: 'tier1' | 'tier2' | 'tier3';
+  data: { count: number; referrals: ReferralInfo[] };
+  earnings: number;
+  isExpanded: boolean;
+  onToggle: () => void;
+}) {
+  const config = TIER_CONFIG[tier];
+
+  return (
+    <div className="border-b border-border last:border-b-0">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center gap-3 p-3 hover:bg-secondary/50 transition-colors cursor-pointer"
+      >
+        {isExpanded ? (
+          <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+        ) : (
+          <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+        )}
+
+        <div className="flex-1 flex items-center justify-between min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{config.label}</span>
+            <span className="text-sm text-muted-foreground">({data.count})</span>
+          </div>
+
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <span>+{formatNumber(config.bonus)}</span>
+            <span className="text-green-500">+{config.percentage}%</span>
+          </div>
+        </div>
+      </button>
+
+      {isExpanded && (
+        <div className="bg-secondary/30">
+          {earnings > 0 && (
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-border/50">
+              <Coins className="w-3.5 h-3.5 text-yellow-500" />
+              <span className="text-xs text-muted-foreground">
+                Earned: <span className="text-foreground font-medium">{formatNumber(earnings)}</span>
+              </span>
+            </div>
+          )}
+
+          {data.referrals.length > 0 ? (
+            <div className="divide-y divide-border/50">
+              {data.referrals.map((referral) => (
+                <ReferralRow key={referral.telegramId} referral={referral} />
+              ))}
+            </div>
+          ) : (
+            <div className="py-6 text-center text-sm text-muted-foreground">
+              {tier === 'tier1'
+                ? 'Invite friends to start earning!'
+                : tier === 'tier2'
+                  ? 'Your friends haven\'t invited anyone yet'
+                  : 'No level 3 referrals yet'}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function FriendsPage() {
@@ -90,8 +180,8 @@ export default function FriendsPage() {
   const [copied, setCopied] = useState(false);
   const [referralsData, setReferralsData] = useState<MultiTierReferralsData | null>(null);
   const [isLoadingReferrals, setIsLoadingReferrals] = useState(true);
+  const [expandedTiers, setExpandedTiers] = useState<Set<string>>(new Set(['tier1']));
 
-  // Fetch multi-tier referrals data
   useEffect(() => {
     if (!isLoaded || !initData) return;
 
@@ -117,23 +207,13 @@ export default function FriendsPage() {
     fetchReferrals();
   }, [isLoaded, initData]);
 
-  // Show skeleton until data is loaded
   if (!isLoaded || isLoadingReferrals) {
     return (
-      <div className="flex flex-1 flex-col bg-background">
-        <div className="p-4">
-          <Card className="p-4">
-            <div className="h-5 w-40 bg-secondary rounded animate-pulse mb-3" />
-            <div className="space-y-2">
-              <div className="h-4 w-32 bg-secondary rounded animate-pulse" />
-              <div className="h-4 w-36 bg-secondary rounded animate-pulse" />
-            </div>
-          </Card>
-          <div className="mt-4 flex gap-2">
-            <div className="flex-1 h-10 bg-secondary rounded animate-pulse" />
-            <div className="h-10 w-10 bg-secondary rounded animate-pulse" />
-          </div>
-        </div>
+      <div className="flex flex-1 flex-col bg-background p-4">
+        <div className="h-32 bg-secondary rounded-xl animate-pulse mb-4" />
+        <div className="h-12 bg-secondary rounded-lg animate-pulse mb-2" />
+        <div className="h-12 bg-secondary rounded-lg animate-pulse mb-2" />
+        <div className="h-12 bg-secondary rounded-lg animate-pulse" />
       </div>
     );
   }
@@ -167,145 +247,102 @@ export default function FriendsPage() {
     }
   };
 
+  const toggleTier = (tier: string) => {
+    setExpandedTiers(prev => {
+      const next = new Set(prev);
+      if (next.has(tier)) {
+        next.delete(tier);
+      } else {
+        next.add(tier);
+      }
+      return next;
+    });
+  };
+
   const tier1 = referralsData?.tier1 ?? { count: 0, referrals: [] };
   const tier2 = referralsData?.tier2 ?? { count: 0, referrals: [] };
   const tier3 = referralsData?.tier3 ?? { count: 0, referrals: [] };
   const earnings = referralsData?.earnings ?? { tier1: 0, tier2: 0, tier3: 0, total: 0 };
-
   const totalReferrals = tier1.count + tier2.count + tier3.count;
-
-  const renderTierContent = (
-    tier: 'tier1' | 'tier2' | 'tier3',
-    data: { count: number; referrals: ReferralInfo[] },
-    tierEarnings: number
-  ) => {
-    const config = TIER_CONFIG[tier];
-
-    return (
-      <div className="flex flex-col gap-3">
-        {/* Tier info card */}
-        <Card className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className={`p-2 rounded-lg ${config.bgColor}`}>
-                <Gift className={`h-4 w-4 ${config.color}`} />
-              </div>
-              <div>
-                <p className="text-sm font-medium">+{formatNumber(config.bonus)} per invite</p>
-                <p className="text-xs text-muted-foreground">+{config.percentage}% of earnings</p>
-              </div>
-            </div>
-          </div>
-          <div className={`flex items-center gap-2 p-2 rounded-lg ${config.bgColor}`}>
-            <TrendingUp className={`h-4 w-4 ${config.color}`} />
-            <span className="text-sm">
-              Total earned: <span className="font-bold">{formatNumber(tierEarnings)}</span>
-            </span>
-          </div>
-        </Card>
-
-        {/* Referrals list */}
-        {data.referrals.length > 0 ? (
-          <div className="flex flex-col gap-2">
-            {data.referrals.map((referral) => (
-              <ReferralCard key={referral.telegramId} referral={referral} />
-            ))}
-          </div>
-        ) : (
-          <div className="mt-8 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
-              <Users className="h-8 w-8" />
-            </div>
-            <p className="text-muted-foreground">
-              {tier === 'tier1'
-                ? 'No friends yet'
-                : tier === 'tier2'
-                  ? 'Your friends haven\'t invited anyone yet'
-                  : 'No level 3 referrals yet'}
-            </p>
-            {tier === 'tier1' && (
-              <p className="mt-1 text-sm text-muted-foreground">
-                Invite friends to earn bonus coins!
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
 
   return (
     <div className="flex flex-1 flex-col bg-background">
-      {/* Header with invite info */}
-      <div className="p-4">
+      {/* Hero Card */}
+      <div className="p-4 pb-3">
         <Card className="p-4">
-          <h2 className="mb-3 font-semibold">Invite Friends & Earn!</h2>
-          <div className="space-y-2 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <Gift className="h-4 w-4 text-green-500" />
-              <span>+{formatNumber(REFERRAL_BONUSES.tier1)} for direct friends</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Gem className="h-4 w-4 text-blue-500" />
-              <span>Up to 3 levels of referral earnings</span>
-            </div>
+          <div className="flex items-start justify-between mb-4">
+            <AvatarStack count={totalReferrals} />
+            {totalReferrals === 0 && (
+              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                <Users className="w-5 h-5 text-muted-foreground" />
+              </div>
+            )}
           </div>
-          {earnings.total > 0 && (
-            <div className="mt-3 pt-3 border-t flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Total network earnings:</span>
-              <span className="font-bold text-lg">
-                <SlidingNumber value={earnings.total} />
+
+          <div className="mb-4">
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold">
+                <SlidingNumber value={totalReferrals} />
+              </span>
+              <span className="text-muted-foreground">
+                {totalReferrals === 1 ? 'friend' : 'friends'}
               </span>
             </div>
-          )}
-        </Card>
+            {earnings.total > 0 && (
+              <div className="flex items-center gap-1 mt-1">
+                <Coins className="w-4 h-4 text-yellow-500" />
+                <span className="text-sm text-muted-foreground">
+                  <span className="text-foreground font-medium">
+                    <SlidingNumber value={earnings.total} />
+                  </span>
+                  {' '}earned
+                </span>
+              </div>
+            )}
+          </div>
 
-        {/* Invite buttons */}
-        <div className="mt-4 flex gap-2">
-          <Button onClick={handleInvite} className="flex-1 cursor-pointer">
-            <UserPlus className="h-4 w-4 mr-2" />
-            Invite Friend
-          </Button>
-          <Button onClick={handleCopyLink} variant="outline" size="icon" className="cursor-pointer">
-            {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-          </Button>
-        </div>
+          <div className="flex gap-2">
+            <Button onClick={handleInvite} className="flex-1 cursor-pointer">
+              <UserPlus className="w-4 h-4 mr-2" />
+              Invite
+            </Button>
+            <Button
+              onClick={handleCopyLink}
+              variant="secondary"
+              className={cn("cursor-pointer", copied && "text-green-500")}
+            >
+              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            </Button>
+          </div>
+        </Card>
       </div>
 
-      {/* Tabs section */}
-      <main className="flex-1 p-4 pt-0">
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-            Your network (<SlidingNumber value={totalReferrals} />)
-          </h3>
-        </div>
-
-        <Tabs defaultValue="tier1" className="w-full">
-          <TabsList className="w-full mb-4">
-            <TabsTrigger value="tier1" className="flex-1 cursor-pointer">
-              {TIER_CONFIG.tier1.label} ({tier1.count})
-            </TabsTrigger>
-            <TabsTrigger value="tier2" className="flex-1 cursor-pointer">
-              {TIER_CONFIG.tier2.label} ({tier2.count})
-            </TabsTrigger>
-            <TabsTrigger value="tier3" className="flex-1 cursor-pointer">
-              {TIER_CONFIG.tier3.label} ({tier3.count})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="tier1">
-            {renderTierContent('tier1', tier1, earnings.tier1)}
-          </TabsContent>
-
-          <TabsContent value="tier2">
-            {renderTierContent('tier2', tier2, earnings.tier2)}
-          </TabsContent>
-
-          <TabsContent value="tier3">
-            {renderTierContent('tier3', tier3, earnings.tier3)}
-          </TabsContent>
-        </Tabs>
-      </main>
+      {/* Referral Tiers Accordion */}
+      <div className="flex-1 px-4 pb-4">
+        <Card className="overflow-hidden">
+          <TierSection
+            tier="tier1"
+            data={tier1}
+            earnings={earnings.tier1}
+            isExpanded={expandedTiers.has('tier1')}
+            onToggle={() => toggleTier('tier1')}
+          />
+          <TierSection
+            tier="tier2"
+            data={tier2}
+            earnings={earnings.tier2}
+            isExpanded={expandedTiers.has('tier2')}
+            onToggle={() => toggleTier('tier2')}
+          />
+          <TierSection
+            tier="tier3"
+            data={tier3}
+            earnings={earnings.tier3}
+            isExpanded={expandedTiers.has('tier3')}
+            onToggle={() => toggleTier('tier3')}
+          />
+        </Card>
+      </div>
     </div>
   );
 }
