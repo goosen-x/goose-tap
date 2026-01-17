@@ -96,11 +96,18 @@ export async function getOrCreateUser(
   `;
 
   const newUser = newRows[0];
+  console.log('[getOrCreateUser] New user created successfully:', newUser.telegram_id)
 
   // If referred by someone, award bonus to referrer
   if (referredBy && referredBy !== telegramId) {
     console.log('[getOrCreateUser] Processing referral bonus for referrer:', referredBy)
-    await processReferralBonus(referredBy, newUser);
+    try {
+      await processReferralBonus(referredBy, newUser);
+      console.log('[getOrCreateUser] Referral bonus processed successfully')
+    } catch (error) {
+      // Log but don't fail user creation
+      console.error('[getOrCreateUser] Failed to process referral bonus:', error)
+    }
   }
 
   return newUser;
@@ -108,6 +115,8 @@ export async function getOrCreateUser(
 
 // Process referral bonus for the referrer
 async function processReferralBonus(referrerId: number, newUser: DbUser): Promise<void> {
+  console.log('[Referral] Starting processReferralBonus for referrer:', referrerId, 'newUser:', newUser.telegram_id);
+
   try {
     // Get referrer
     const { rows: referrerRows } = await sql<DbUser>`
@@ -115,34 +124,40 @@ async function processReferralBonus(referrerId: number, newUser: DbUser): Promis
     `;
 
     if (referrerRows.length === 0) {
-      console.log('[Referral] Referrer not found:', referrerId);
+      console.log('[Referral] ERROR: Referrer not found:', referrerId);
       return;
     }
 
     const referrer = referrerRows[0];
+    console.log('[Referral] Found referrer:', referrer.username, 'current coins:', referrer.coins, 'current referrals count:', referrer.referrals?.length ?? 0);
 
-    // Create new referral entry
+    // Create new referral entry with all required fields
     const newReferral = {
       id: `ref-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       username: newUser.username || undefined,
       firstName: newUser.first_name || 'Anonymous',
+      coins: 0, // Initial coins earned from this referral
       joinedAt: Date.now(),
     };
 
     // Update referrer's referrals array and add bonus coins
     const updatedReferrals = [...(referrer.referrals ?? []), newReferral];
+    console.log('[Referral] New referrals array length:', updatedReferrals.length);
 
-    await sql`
+    const result = await sql`
       UPDATE users SET
         referrals = ${JSON.stringify(updatedReferrals)}::jsonb,
         coins = coins + ${REFERRAL_BONUS},
         updated_at = NOW()
       WHERE telegram_id = ${referrerId}
+      RETURNING coins
     `;
 
-    console.log('[Referral] Bonus awarded to referrer:', referrerId, 'for new user:', newUser.telegram_id);
+    console.log('[Referral] SUCCESS! Bonus awarded to referrer:', referrerId, 'for new user:', newUser.telegram_id, 'new coins:', result.rows[0]?.coins);
   } catch (error) {
-    console.error('[Referral] Error processing referral bonus:', error);
+    console.error('[Referral] CRITICAL ERROR processing referral bonus:', error);
+    // Re-throw to make sure we know about failures
+    throw error;
   }
 }
 
