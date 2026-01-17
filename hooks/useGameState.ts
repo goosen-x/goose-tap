@@ -11,7 +11,12 @@ import {
   Referral,
   calculateUpgradeCost,
   calculateTotalBonus,
-  calculateLevel,
+  calculateLevelFromXP,
+  calculateLevelBonuses,
+  getLevelData,
+  getNextLevelData,
+  XP_REWARDS,
+  Level,
 } from '@/types/game';
 import {
   loadGameState,
@@ -28,16 +33,24 @@ export interface UseGameStateOptions {
 export interface UseGameStateResult {
   // State
   coins: number;
+  xp: number;
   energy: number;
   maxEnergy: number;
   coinsPerTap: number;
   coinsPerHour: number;
   level: number;
+  totalTaps: number;
   upgrades: UserUpgrade[];
   tasks: UserTask[];
   referrals: Referral[];
   lastEnergyUpdate: number;
   lastOfflineEarnings: number;
+
+  // Level info
+  levelData: Level;
+  nextLevelData: Level | null;
+  xpToNextLevel: number;
+  levelProgress: number; // 0-100%
 
   // Status
   isLoaded: boolean;
@@ -209,20 +222,53 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     return () => clearInterval(interval);
   }, [isLoaded]);
 
+  // Helper to recalculate stats with upgrades and level bonuses
+  const recalculateStats = useCallback((
+    upgrades: UserUpgrade[],
+    level: number
+  ) => {
+    const upgradeBonus = {
+      tap: calculateTotalBonus(upgrades, 'tap'),
+      hour: calculateTotalBonus(upgrades, 'hour'),
+      energy: calculateTotalBonus(upgrades, 'energy'),
+    };
+    const levelBonus = calculateLevelBonuses(level);
+
+    return {
+      coinsPerTap: 1 + upgradeBonus.tap + levelBonus.totalCoinsPerTap,
+      coinsPerHour: Math.floor(upgradeBonus.hour * levelBonus.passiveIncomeMultiplier),
+      maxEnergy: 1000 + upgradeBonus.energy + levelBonus.totalMaxEnergy,
+    };
+  }, []);
+
   // Tap handler with optimistic update
   const tap = useCallback(() => {
     // Optimistic update
     setState((prev) => {
       if (prev.energy <= 0) return prev;
 
-      const newCoins = prev.coins + prev.coinsPerTap;
-      const newLevel = calculateLevel(newCoins);
+      const newXP = prev.xp + XP_REWARDS.tap;
+      const newLevel = calculateLevelFromXP(newXP);
+      const newTotalTaps = prev.totalTaps + 1;
+
+      // Recalculate stats if level changed
+      let stats = {
+        coinsPerTap: prev.coinsPerTap,
+        coinsPerHour: prev.coinsPerHour,
+        maxEnergy: prev.maxEnergy,
+      };
+      if (newLevel !== prev.level) {
+        stats = recalculateStats(prev.upgrades, newLevel);
+      }
 
       const newState = {
         ...prev,
-        coins: newCoins,
+        coins: prev.coins + prev.coinsPerTap,
+        xp: newXP,
         energy: prev.energy - 1,
         level: newLevel,
+        totalTaps: newTotalTaps,
+        ...stats,
       };
       saveGameState(newState); // Cache locally
       return newState;
@@ -233,7 +279,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     if (initDataRef.current) {
       gameAPI.tap(initDataRef.current, 1).catch(console.error);
     }
-  }, []);
+  }, [recalculateStats]);
 
   // Purchase upgrade with optimistic update
   const purchaseUpgrade = useCallback((upgradeId: string): boolean => {
@@ -251,26 +297,30 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
       const cost = calculateUpgradeCost(upgrade, currentLevel);
       if (prev.coins < cost) return prev;
 
+      const newUpgradeLevel = currentLevel + 1;
       const newUpgrades: UserUpgrade[] = existingUpgrade
         ? prev.upgrades.map((u) =>
-            u.upgradeId === upgradeId ? { ...u, level: u.level + 1 } : u
+            u.upgradeId === upgradeId ? { ...u, level: newUpgradeLevel } : u
           )
         : [...prev.upgrades, { upgradeId, level: 1 }];
 
-      // Recalculate bonuses
-      const newCoinsPerTap = 1 + calculateTotalBonus(newUpgrades, 'tap');
-      const newCoinsPerHour = calculateTotalBonus(newUpgrades, 'hour');
-      const newMaxEnergy = 1000 + calculateTotalBonus(newUpgrades, 'energy');
+      // Award XP for upgrade (100 * upgrade level)
+      const xpGained = XP_REWARDS.upgrade * newUpgradeLevel;
+      const newXP = prev.xp + xpGained;
+      const newLevel = calculateLevelFromXP(newXP);
+
+      // Recalculate stats with new upgrades and level
+      const stats = recalculateStats(newUpgrades, newLevel);
 
       success = true;
 
       const newState = {
         ...prev,
         coins: prev.coins - cost,
+        xp: newXP,
+        level: newLevel,
         upgrades: newUpgrades,
-        coinsPerTap: newCoinsPerTap,
-        coinsPerHour: newCoinsPerHour,
-        maxEnergy: newMaxEnergy,
+        ...stats,
       };
       saveGameState(newState); // Cache locally
       return newState;
@@ -282,7 +332,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     }
 
     return success;
-  }, []);
+  }, [recalculateStats]);
 
   // Complete task with optimistic update
   const completeTask = useCallback((taskId: string): boolean => {
@@ -312,12 +362,29 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
           )
         : [...prev.tasks, { taskId, status: 'claimed' as const, completedAt: Date.now() }];
 
+      // Award XP for task
+      const newXP = prev.xp + XP_REWARDS.task;
+      const newLevel = calculateLevelFromXP(newXP);
+
+      // Recalculate stats if level changed
+      let stats = {
+        coinsPerTap: prev.coinsPerTap,
+        coinsPerHour: prev.coinsPerHour,
+        maxEnergy: prev.maxEnergy,
+      };
+      if (newLevel !== prev.level) {
+        stats = recalculateStats(prev.upgrades, newLevel);
+      }
+
       success = true;
 
       const newState = {
         ...prev,
         coins: prev.coins + task.reward,
+        xp: newXP,
+        level: newLevel,
         tasks: newTasks,
+        ...stats,
       };
       saveGameState(newState); // Cache locally
       return newState;
@@ -329,11 +396,25 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     }
 
     return success;
-  }, []);
+  }, [recalculateStats]);
 
   // Add referral
   const addReferral = useCallback((referral: Omit<Referral, 'id'>): void => {
     setState((prev) => {
+      // Award XP for referral
+      const newXP = prev.xp + XP_REWARDS.referral;
+      const newLevel = calculateLevelFromXP(newXP);
+
+      // Recalculate stats if level changed
+      let stats = {
+        coinsPerTap: prev.coinsPerTap,
+        coinsPerHour: prev.coinsPerHour,
+        maxEnergy: prev.maxEnergy,
+      };
+      if (newLevel !== prev.level) {
+        stats = recalculateStats(prev.upgrades, newLevel);
+      }
+
       const newState = {
         ...prev,
         referrals: [
@@ -341,6 +422,9 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
           { ...referral, id: `ref-${Date.now()}-${Math.random().toString(36).slice(2)}` },
         ],
         coins: prev.coins + 10000, // Referral bonus
+        xp: newXP,
+        level: newLevel,
+        ...stats,
       };
       saveGameState(newState); // Cache locally
       return newState;
@@ -350,7 +434,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     if (initDataRef.current) {
       gameAPI.saveGame(initDataRef.current, stateRef.current).catch(console.error);
     }
-  }, []);
+  }, [recalculateStats]);
 
   // Get upgrade level
   const getUpgradeLevel = useCallback(
@@ -395,6 +479,14 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     }
   }, []);
 
+  // Calculate level progress info
+  const levelData = getLevelData(state.level);
+  const nextLevelData = getNextLevelData(state.level);
+  const xpToNextLevel = nextLevelData ? nextLevelData.xpRequired - state.xp : 0;
+  const levelProgress = nextLevelData
+    ? ((state.xp - levelData.xpRequired) / (nextLevelData.xpRequired - levelData.xpRequired)) * 100
+    : 100;
+
   return {
     // State
     ...state,
@@ -402,6 +494,12 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     isLoading,
     error,
     offlineEarnings,
+
+    // Level info
+    levelData,
+    nextLevelData,
+    xpToNextLevel,
+    levelProgress: Math.min(Math.max(levelProgress, 0), 100),
 
     // Actions
     tap,

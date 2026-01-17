@@ -17,7 +17,7 @@ export function Header() {
 
   if (!isLoaded) {
     return (
-      <header className="flex items-center justify-between border-b bg-background px-4 py-2">
+      <header className="flex shrink-0 items-center justify-between border-b bg-background px-4 py-2">
         <div className="flex items-center gap-2">
           <Avatar className="h-8 w-8">
             <AvatarFallback>{initials}</AvatarFallback>
@@ -30,7 +30,7 @@ export function Header() {
   }
 
   return (
-    <header className="flex items-center justify-between border-b bg-background px-4 py-2">
+    <header className="flex shrink-0 items-center justify-between border-b bg-background px-4 py-2">
       <div className="flex items-center gap-2">
         <Avatar className="h-8 w-8">
           {user?.photo_url && (

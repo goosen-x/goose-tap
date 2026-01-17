@@ -44,15 +44,11 @@ export default function RootLayout({
       >
         <GameProvider>
           <div className="flex h-screen flex-col">
-            <div className="fixed top-0 left-0 right-0 z-10">
-              <Header />
-            </div>
-            <div className="flex-1 overflow-auto pt-[52px] pb-[52px]">
+            <Header />
+            <main className="flex-1 overflow-auto">
               {children}
-            </div>
-            <div className="fixed bottom-0 left-0 right-0 z-10">
-              <BottomNav />
-            </div>
+            </main>
+            <BottomNav />
           </div>
         </GameProvider>
       </body>

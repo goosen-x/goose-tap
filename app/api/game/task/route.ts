@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server';
 import { validateInitDataWithDevFallback } from '@/lib/telegram-auth';
 import { getUser, updateUserState, dbRowToGameState } from '@/lib/db';
-import { TASKS, UserTask } from '@/types/game';
+import {
+  TASKS,
+  UserTask,
+  calculateLevelFromXP,
+  calculateLevelBonuses,
+  calculateTotalBonus,
+  XP_REWARDS,
+} from '@/types/game';
 
 export async function POST(request: Request) {
   try {
@@ -90,16 +97,42 @@ export async function POST(request: Request) {
         )
       : [...state.tasks, { taskId, status: 'claimed' as const, completedAt: Date.now() }];
 
-    // Update user state with reward
-    const updatedUser = await updateUserState(user.id, {
+    // Award XP for task completion
+    const newXP = state.xp + XP_REWARDS.task;
+    const newLevel = calculateLevelFromXP(newXP);
+
+    // Check if level changed and recalculate stats
+    let updateData: Parameters<typeof updateUserState>[1] = {
       coins: state.coins + task.reward,
+      xp: newXP,
       tasks: newTasks,
-    });
+    };
+
+    if (newLevel !== state.level) {
+      const levelBonus = calculateLevelBonuses(newLevel);
+      const upgradeBonus = {
+        tap: calculateTotalBonus(state.upgrades, 'tap'),
+        hour: calculateTotalBonus(state.upgrades, 'hour'),
+        energy: calculateTotalBonus(state.upgrades, 'energy'),
+      };
+
+      updateData = {
+        ...updateData,
+        level: newLevel,
+        coinsPerTap: 1 + upgradeBonus.tap + levelBonus.totalCoinsPerTap,
+        coinsPerHour: Math.floor(upgradeBonus.hour * levelBonus.passiveIncomeMultiplier),
+        maxEnergy: 1000 + upgradeBonus.energy + levelBonus.totalMaxEnergy,
+      };
+    }
+
+    // Update user state with reward and XP
+    const updatedUser = await updateUserState(user.id, updateData);
 
     return NextResponse.json({
       success: true,
       state: dbRowToGameState(updatedUser),
       reward: task.reward,
+      xpEarned: XP_REWARDS.task,
     });
   } catch (error) {
     console.error('Task error:', error);

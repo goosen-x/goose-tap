@@ -1,6 +1,9 @@
 'use client';
 
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore, useCallback } from 'react';
+
+// Global flag to prevent multiple initializations
+let isInitialized = false;
 
 function getWebApp() {
   if (typeof window === 'undefined') return null;
@@ -26,16 +29,40 @@ function getServerSnapshot() {
   return null;
 }
 
+// Check if HapticFeedback is supported (requires version 6.1+)
+function isHapticSupported(webApp: ReturnType<typeof getWebApp>): boolean {
+  if (!webApp) return false;
+  const version = parseFloat(webApp.version || '0');
+  return version >= 6.1;
+}
+
 export function useTelegram() {
   const webApp = useSyncExternalStore(subscribe, getWebApp, getServerSnapshot);
 
   useEffect(() => {
+    // Only initialize once globally
+    if (isInitialized) return;
+
     const tg = getWebApp();
     if (tg) {
       tg.ready();
       tg.expand();
+      isInitialized = true;
     }
   }, []);
+
+  // Safe haptic feedback that checks support first
+  const hapticFeedback = useCallback((type: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft' = 'light') => {
+    if (webApp && isHapticSupported(webApp)) {
+      webApp.HapticFeedback?.impactOccurred(type);
+    }
+  }, [webApp]);
+
+  const hapticNotification = useCallback((type: 'error' | 'success' | 'warning' = 'success') => {
+    if (webApp && isHapticSupported(webApp)) {
+      webApp.HapticFeedback?.notificationOccurred(type);
+    }
+  }, [webApp]);
 
   return {
     webApp,
@@ -46,5 +73,9 @@ export function useTelegram() {
     themeParams: webApp?.themeParams,
     viewportHeight: webApp?.viewportHeight,
     isExpanded: webApp?.isExpanded,
+    // Safe haptic methods
+    hapticFeedback,
+    hapticNotification,
+    isHapticSupported: isHapticSupported(webApp),
   };
 }

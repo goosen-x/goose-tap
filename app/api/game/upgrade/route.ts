@@ -6,6 +6,9 @@ import {
   UserUpgrade,
   calculateUpgradeCost,
   calculateTotalBonus,
+  calculateLevelFromXP,
+  calculateLevelBonuses,
+  XP_REWARDS,
 } from '@/types/game';
 
 export async function POST(request: Request) {
@@ -82,20 +85,38 @@ export async function POST(request: Request) {
     }
 
     // Create new upgrades array
+    const newUpgradeLevel = currentLevel + 1;
     const newUpgrades: UserUpgrade[] = existingUpgrade
       ? state.upgrades.map((u) =>
           u.upgradeId === upgradeId ? { ...u, level: u.level + 1 } : u
         )
       : [...state.upgrades, { upgradeId, level: 1 }];
 
-    // Recalculate bonuses
-    const newCoinsPerTap = 1 + calculateTotalBonus(newUpgrades, 'tap');
-    const newCoinsPerHour = calculateTotalBonus(newUpgrades, 'hour');
-    const newMaxEnergy = 1000 + calculateTotalBonus(newUpgrades, 'energy');
+    // Award XP for upgrade (100 * upgrade level)
+    const xpGained = XP_REWARDS.upgrade * newUpgradeLevel;
+    const newXP = state.xp + xpGained;
+    const newLevel = calculateLevelFromXP(newXP);
+
+    // Calculate upgrade bonuses
+    const upgradeBonus = {
+      tap: calculateTotalBonus(newUpgrades, 'tap'),
+      hour: calculateTotalBonus(newUpgrades, 'hour'),
+      energy: calculateTotalBonus(newUpgrades, 'energy'),
+    };
+
+    // Calculate level bonuses
+    const levelBonus = calculateLevelBonuses(newLevel);
+
+    // Combined stats
+    const newCoinsPerTap = 1 + upgradeBonus.tap + levelBonus.totalCoinsPerTap;
+    const newCoinsPerHour = Math.floor(upgradeBonus.hour * levelBonus.passiveIncomeMultiplier);
+    const newMaxEnergy = 1000 + upgradeBonus.energy + levelBonus.totalMaxEnergy;
 
     // Update user state
     const updatedUser = await updateUserState(user.id, {
       coins: state.coins - cost,
+      xp: newXP,
+      level: newLevel,
       upgrades: newUpgrades,
       coinsPerTap: newCoinsPerTap,
       coinsPerHour: newCoinsPerHour,

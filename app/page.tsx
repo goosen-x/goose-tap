@@ -15,7 +15,7 @@ interface TapEffect {
 }
 
 export default function Home() {
-  const { webApp } = useTelegram();
+  const { hapticFeedback } = useTelegram();
   const { energy, maxEnergy, coinsPerTap, tap, isLoaded } = useGame();
   const [tapEffects, setTapEffects] = useState<TapEffect[]>([]);
   const [isPressed, setIsPressed] = useState(false);
@@ -35,8 +35,8 @@ export default function Home() {
 
       if (energy <= 0) return;
 
-      // Haptic feedback
-      webApp?.HapticFeedback?.impactOccurred('light');
+      // Haptic feedback (safe - checks version support)
+      hapticFeedback('light');
 
       // Perform tap action
       tap();
@@ -59,7 +59,7 @@ export default function Home() {
         setTapEffects((prev) => prev.filter((effect) => effect.id !== newEffect.id));
       }, 800);
     },
-    [energy, coinsPerTap, webApp, tap]
+    [energy, coinsPerTap, hapticFeedback, tap]
   );
 
   const handlePointerUp = useCallback(() => {
@@ -82,14 +82,13 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-background">
-      {/* Main tap area */}
+    <div className="flex flex-1 flex-col justify-between bg-background min-h-full">
+      {/* Main tap area - centered */}
       <main className="flex flex-1 flex-col items-center justify-center p-4">
         <div
           className={`relative flex h-56 w-56 cursor-pointer select-none items-center justify-center rounded-full border-4 border-border bg-secondary shadow-lg transition-transform duration-75 ${
             isPressed ? 'scale-95' : 'scale-100'
           }`}
-          style={{ touchAction: 'manipulation' }}
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerUp}
@@ -121,17 +120,19 @@ export default function Home() {
         </p>
       </main>
 
-      {/* Energy bar */}
-      <Card className="mx-4 mb-4 p-4">
-        <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
-          <div className="flex items-center gap-1">
-            <Zap className="h-4 w-4" />
-            <span>{energy}/{maxEnergy}</span>
+      {/* Energy bar - at bottom in normal flow */}
+      <div className="shrink-0 px-4 pb-4">
+        <Card className="p-4">
+          <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
+            <div className="flex items-center gap-1">
+              <Zap className="h-4 w-4" />
+              <span>{energy}/{maxEnergy}</span>
+            </div>
+            <span>+{coinsPerTap}/tap</span>
           </div>
-          <span>+{coinsPerTap}/tap</span>
-        </div>
-        <Progress value={energyPercentage} className="h-2" />
-      </Card>
+          <Progress value={energyPercentage} className="h-2" />
+        </Card>
+      </div>
     </div>
   );
 }

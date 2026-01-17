@@ -38,7 +38,7 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="flex items-center justify-around border-t bg-background px-2 py-2">
+    <nav className="flex shrink-0 items-center justify-around border-t bg-background px-2 py-2">
       {navItems.map((item) => (
         <NavItem
           key={item.href}

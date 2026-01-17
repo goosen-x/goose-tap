@@ -52,14 +52,56 @@ export interface Referral {
   joinedAt: number;
 }
 
+// Level system
+export interface LevelBonus {
+  coinsPerTap?: number;
+  maxEnergy?: number;
+  passiveIncomeMultiplier?: number; // 1.05 = +5%
+}
+
+export interface Level {
+  level: number;
+  xpRequired: number;
+  title: string;
+  bonus: LevelBonus;
+}
+
+export const LEVELS: Level[] = [
+  { level: 1, xpRequired: 0, title: 'Newbie', bonus: {} },
+  { level: 2, xpRequired: 500, title: 'Beginner', bonus: { coinsPerTap: 1 } },
+  { level: 3, xpRequired: 1500, title: 'Tapper', bonus: { maxEnergy: 50 } },
+  { level: 4, xpRequired: 4000, title: 'Amateur', bonus: { coinsPerTap: 1 } },
+  { level: 5, xpRequired: 10000, title: 'Skilled', bonus: { maxEnergy: 100 } },
+  { level: 6, xpRequired: 20000, title: 'Expert', bonus: { coinsPerTap: 2 } },
+  { level: 7, xpRequired: 40000, title: 'Pro', bonus: { passiveIncomeMultiplier: 1.05 } },
+  { level: 8, xpRequired: 80000, title: 'Master', bonus: { maxEnergy: 150, coinsPerTap: 2 } },
+  { level: 9, xpRequired: 150000, title: 'Champion', bonus: { passiveIncomeMultiplier: 1.10 } },
+  { level: 10, xpRequired: 300000, title: 'Legend', bonus: { coinsPerTap: 3, maxEnergy: 200 } },
+  { level: 11, xpRequired: 500000, title: 'Mythic', bonus: { passiveIncomeMultiplier: 1.15 } },
+  { level: 12, xpRequired: 800000, title: 'Divine', bonus: { coinsPerTap: 5, maxEnergy: 300 } },
+  { level: 13, xpRequired: 1200000, title: 'Immortal', bonus: { passiveIncomeMultiplier: 1.20 } },
+  { level: 14, xpRequired: 2000000, title: 'Goose King', bonus: { coinsPerTap: 10, maxEnergy: 500 } },
+  { level: 15, xpRequired: 5000000, title: 'Goose God', bonus: { passiveIncomeMultiplier: 1.50, coinsPerTap: 20 } },
+];
+
+// XP rewards
+export const XP_REWARDS = {
+  tap: 1,
+  upgrade: 100, // multiplied by upgrade level
+  task: 500,
+  referral: 1000,
+};
+
 // Game state
 export interface GameState {
   coins: number;
+  xp: number;
   energy: number;
   maxEnergy: number;
   coinsPerTap: number;
   coinsPerHour: number;
   level: number;
+  totalTaps: number;
   upgrades: UserUpgrade[];
   tasks: UserTask[];
   referrals: Referral[];
@@ -70,11 +112,13 @@ export interface GameState {
 // Default game state
 export const DEFAULT_GAME_STATE: GameState = {
   coins: 0,
+  xp: 0,
   energy: 1000,
   maxEnergy: 1000,
   coinsPerTap: 1,
   coinsPerHour: 0,
   level: 1,
+  totalTaps: 0,
   upgrades: [],
   tasks: [],
   referrals: [],
@@ -234,6 +278,51 @@ export function calculateTotalBonus(
   }, 0);
 }
 
+// Calculate level from XP
+export function calculateLevelFromXP(xp: number): number {
+  for (let i = LEVELS.length - 1; i >= 0; i--) {
+    if (xp >= LEVELS[i].xpRequired) {
+      return LEVELS[i].level;
+    }
+  }
+  return 1;
+}
+
+// Get current level data
+export function getLevelData(level: number): Level {
+  return LEVELS.find(l => l.level === level) || LEVELS[0];
+}
+
+// Get next level data
+export function getNextLevelData(level: number): Level | null {
+  const nextLevel = LEVELS.find(l => l.level === level + 1);
+  return nextLevel || null;
+}
+
+// Calculate total bonuses from all levels up to current
+export function calculateLevelBonuses(level: number): {
+  totalCoinsPerTap: number;
+  totalMaxEnergy: number;
+  passiveIncomeMultiplier: number;
+} {
+  let totalCoinsPerTap = 0;
+  let totalMaxEnergy = 0;
+  let passiveIncomeMultiplier = 1;
+
+  for (const lvl of LEVELS) {
+    if (lvl.level <= level) {
+      totalCoinsPerTap += lvl.bonus.coinsPerTap || 0;
+      totalMaxEnergy += lvl.bonus.maxEnergy || 0;
+      if (lvl.bonus.passiveIncomeMultiplier) {
+        passiveIncomeMultiplier = lvl.bonus.passiveIncomeMultiplier;
+      }
+    }
+  }
+
+  return { totalCoinsPerTap, totalMaxEnergy, passiveIncomeMultiplier };
+}
+
+// Legacy function for backwards compatibility
 export function calculateLevel(coins: number): number {
   return Math.floor(coins / 10000) + 1;
 }

@@ -30,7 +30,7 @@ const iconMap: Record<string, React.ReactNode> = {
 
 export function TaskCard({ task, isCompleted, progress, onComplete, onAction }: TaskCardProps) {
   const { checkSubscription, isChecking } = useSubscription();
-  const { user, webApp } = useTelegram();
+  const { user, hapticNotification } = useTelegram();
   const [error, setError] = useState<string | null>(null);
 
   const hasProgress = task.requirement && task.requirement > 1;
@@ -49,13 +49,13 @@ export function TaskCard({ task, isCompleted, progress, onComplete, onAction }: 
       if (!result.subscribed) {
         setError('Subscribe to the channel first!');
         // Provide haptic feedback for error
-        webApp?.HapticFeedback?.notificationOccurred('error');
+        hapticNotification('error');
         return;
       }
     }
 
     // Subscription verified or not required, complete the task
-    webApp?.HapticFeedback?.notificationOccurred('success');
+    hapticNotification('success');
     onComplete();
   };
 

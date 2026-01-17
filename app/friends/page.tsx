@@ -13,7 +13,7 @@ const EARNINGS_PERCENTAGE = 10;
 
 export default function FriendsPage() {
   const { referrals } = useGame();
-  const { webApp, user } = useTelegram();
+  const { webApp, user, hapticNotification } = useTelegram();
 
   const totalEarned = referrals.length * REFERRAL_BONUS;
 
@@ -35,10 +35,7 @@ export default function FriendsPage() {
     const referralLink = `https://t.me/goosetap_bot?startapp=ref_${userId}`;
 
     navigator.clipboard?.writeText(referralLink);
-
-    if (webApp) {
-      webApp.HapticFeedback?.notificationOccurred('success');
-    }
+    hapticNotification('success');
   };
 
   return (

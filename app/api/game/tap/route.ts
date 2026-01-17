@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { validateInitDataWithDevFallback } from '@/lib/telegram-auth';
-import { atomicTap, atomicBatchTap, dbRowToGameState, getUser } from '@/lib/db';
-import { calculateLevel } from '@/types/game';
+import { atomicTap, atomicBatchTap, dbRowToGameState, getUser, updateUserState } from '@/lib/db';
+import { calculateLevelFromXP, calculateLevelBonuses, calculateTotalBonus, XP_REWARDS } from '@/types/game';
 
 export async function POST(request: Request) {
   try {
@@ -51,12 +51,31 @@ export async function POST(request: Request) {
       );
     }
 
-    // Calculate and update level if needed
-    const state = dbRowToGameState(dbUser);
-    const newLevel = calculateLevel(state.coins);
+    // Convert to state and check if level changed
+    let state = dbRowToGameState(dbUser);
+    const newLevel = calculateLevelFromXP(state.xp);
 
+    // Update level and recalculate stats if level changed
     if (newLevel !== state.level) {
-      state.level = newLevel;
+      const levelBonus = calculateLevelBonuses(newLevel);
+      const upgradeBonus = {
+        tap: calculateTotalBonus(state.upgrades, 'tap'),
+        hour: calculateTotalBonus(state.upgrades, 'hour'),
+        energy: calculateTotalBonus(state.upgrades, 'energy'),
+      };
+
+      const newCoinsPerTap = 1 + upgradeBonus.tap + levelBonus.totalCoinsPerTap;
+      const newCoinsPerHour = Math.floor(upgradeBonus.hour * levelBonus.passiveIncomeMultiplier);
+      const newMaxEnergy = 1000 + upgradeBonus.energy + levelBonus.totalMaxEnergy;
+
+      const updatedUser = await updateUserState(user.id, {
+        level: newLevel,
+        coinsPerTap: newCoinsPerTap,
+        coinsPerHour: newCoinsPerHour,
+        maxEnergy: newMaxEnergy,
+      });
+
+      state = dbRowToGameState(updatedUser);
     }
 
     return NextResponse.json({
@@ -64,6 +83,7 @@ export async function POST(request: Request) {
       state,
       tapped: count,
       coinsEarned: count * currentUser.coins_per_tap,
+      xpEarned: count * XP_REWARDS.tap,
     });
   } catch (error) {
     console.error('Tap error:', error);
