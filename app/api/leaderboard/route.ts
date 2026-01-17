@@ -3,8 +3,9 @@ import { validateInitDataWithDevFallback } from '@/lib/telegram-auth';
 import { sql } from '@/lib/db';
 import { LeaderboardEntry, LeaderboardResponse } from '@/types/game';
 
-// Dev user ID to exclude from public leaderboard
+// Dev user ID - only visible in development mode
 const DEV_USER_ID = 123456789;
+const IS_DEV = process.env.NODE_ENV === 'development';
 
 export async function GET(request: Request) {
   try {
@@ -24,7 +25,7 @@ export async function GET(request: Request) {
 
     // Get top players with pagination
     // Use subquery to ensure ROW_NUMBER calculates global rank before pagination
-    // Exclude dev user from public leaderboard
+    // Dev user only visible in development mode
     const { rows: leaderboardRows } = await sql<{
       telegram_id: number;
       first_name: string | null;
@@ -44,7 +45,7 @@ export async function GET(request: Request) {
           level,
           ROW_NUMBER() OVER (ORDER BY coins DESC) as rank
         FROM users
-        WHERE coins > 0 AND telegram_id != ${DEV_USER_ID}
+        WHERE coins > 0 AND (${IS_DEV} OR telegram_id != ${DEV_USER_ID})
       ) ranked
       ORDER BY rank
       LIMIT ${limit + 1}
@@ -67,7 +68,7 @@ export async function GET(request: Request) {
     }));
 
     // Get current user's rank if initData provided
-    // Exclude dev user from rank calculation
+    // Dev user only counted in development mode
     let currentUser: LeaderboardResponse['currentUser'] = null;
     if (currentTelegramId) {
       const { rows: userRows } = await sql<{
@@ -76,7 +77,7 @@ export async function GET(request: Request) {
         level: number;
       }>`
         SELECT
-          (SELECT COUNT(*) + 1 FROM users WHERE coins > u.coins AND telegram_id != ${DEV_USER_ID}) as rank,
+          (SELECT COUNT(*) + 1 FROM users WHERE coins > u.coins AND (${IS_DEV} OR telegram_id != ${DEV_USER_ID})) as rank,
           u.coins,
           u.level
         FROM users u
@@ -92,9 +93,9 @@ export async function GET(request: Request) {
       }
     }
 
-    // Get total players count (exclude dev user)
+    // Get total players count (dev user only in development)
     const { rows: countRows } = await sql<{ total: number }>`
-      SELECT COUNT(*) as total FROM users WHERE coins > 0 AND telegram_id != ${DEV_USER_ID}
+      SELECT COUNT(*) as total FROM users WHERE coins > 0 AND (${IS_DEV} OR telegram_id != ${DEV_USER_ID})
     `;
     const totalPlayers = Number(countRows[0]?.total || 0);
 
