@@ -51,7 +51,7 @@ export default function RootLayout({
             </main>
             <BottomNav />
           </div>
-          <Toaster position="top-center" />
+          <Toaster position="bottom-center" />
         </GameProvider>
       </body>
     </html>
