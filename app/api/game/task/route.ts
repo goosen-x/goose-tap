@@ -69,6 +69,30 @@ export async function POST(request: Request) {
       );
     }
 
+    // Check subscription for social tasks with channelId
+    if (task.channelId) {
+      const botToken = process.env.TELEGRAM_BOT_TOKEN;
+      if (!botToken) {
+        return NextResponse.json(
+          { error: 'Bot token not configured' },
+          { status: 500 }
+        );
+      }
+
+      const response = await fetch(
+        `https://api.telegram.org/bot${botToken}/getChatMember?chat_id=${encodeURIComponent(task.channelId)}&user_id=${user.id}`
+      );
+      const data = await response.json();
+
+      const validStatuses = ['member', 'administrator', 'creator'];
+      if (!data.ok || !validStatuses.includes(data.result?.status)) {
+        return NextResponse.json(
+          { error: 'Please subscribe to the channel first' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Check task requirements
     if (task.type === 'referral' && task.requirement) {
       if (state.referrals.length < task.requirement) {

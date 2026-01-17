@@ -32,13 +32,27 @@ export async function POST(request: Request) {
 
     const { user } = validation;
 
+    // Parse start_param for referral tracking
+    const params = new URLSearchParams(initData);
+    const startParam = params.get('start_param');
+    let referrerId: number | undefined;
+
+    if (startParam?.startsWith('ref_')) {
+      const parsedId = parseInt(startParam.slice(4), 10);
+      if (!isNaN(parsedId) && parsedId !== user.id) {
+        referrerId = parsedId;
+        console.log('[Load] Referral detected, referrer:', referrerId);
+      }
+    }
+
     // Get or create user in database
     console.log('[Load] Getting user from DB, telegram_id:', user.id);
     const dbUser = await getOrCreateUser(
       user.id,
       user.username,
       user.first_name,
-      user.photo_url
+      user.photo_url,
+      referrerId
     );
     console.log('[Load] DB user coins:', dbUser.coins, 'level:', dbUser.level);
 

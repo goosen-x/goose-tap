@@ -130,6 +130,10 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
   const stateRef = useRef(state);
   const initDataRef = useRef(initData);
   const loadedFromApi = useRef(false);
+  const lastTapRef = useRef(0);
+
+  // Throttle constant for tap (50ms between taps)
+  const TAP_THROTTLE_MS = 50;
 
   // Keep refs in sync
   useEffect(() => {
@@ -273,8 +277,15 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     };
   }, []);
 
-  // Tap handler with optimistic update
+  // Tap handler with optimistic update and throttle
   const tap = useCallback(() => {
+    // Throttle rapid clicks
+    const now = Date.now();
+    if (now - lastTapRef.current < TAP_THROTTLE_MS) {
+      return; // Ignore rapid clicks
+    }
+    lastTapRef.current = now;
+
     // Optimistic update
     setState((prev) => {
       if (prev.energy <= 0) return prev;
@@ -498,9 +509,13 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
         return state.level;
       }
 
+      if (task.id === 'tap-1000') {
+        return state.totalTaps;
+      }
+
       return 0;
     },
-    [state.referrals.length, state.level]
+    [state.referrals.length, state.level, state.totalTaps]
   );
 
   // Claim daily reward

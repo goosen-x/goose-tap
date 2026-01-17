@@ -18,6 +18,9 @@ export async function POST() {
     // Add total_taps column (if not exists)
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS total_taps INTEGER DEFAULT 0`;
 
+    // Add referred_by column for referral tracking
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by BIGINT`;
+
     return NextResponse.json({ success: true, message: 'Migration completed' });
   } catch (error) {
     console.error('Migration error:', error);

@@ -20,6 +20,7 @@ export async function GET(request: Request) {
     }
 
     // Get top players with pagination
+    // Use subquery to ensure ROW_NUMBER calculates global rank before pagination
     const { rows: leaderboardRows } = await sql<{
       telegram_id: number;
       first_name: string | null;
@@ -29,17 +30,19 @@ export async function GET(request: Request) {
       level: number;
       rank: number;
     }>`
-      SELECT
-        telegram_id,
-        first_name,
-        username,
-        photo_url,
-        coins,
-        level,
-        ROW_NUMBER() OVER (ORDER BY coins DESC) as rank
-      FROM users
-      WHERE coins > 0
-      ORDER BY coins DESC
+      SELECT * FROM (
+        SELECT
+          telegram_id,
+          first_name,
+          username,
+          photo_url,
+          coins,
+          level,
+          ROW_NUMBER() OVER (ORDER BY coins DESC) as rank
+        FROM users
+        WHERE coins > 0
+      ) ranked
+      ORDER BY rank
       LIMIT ${limit + 1}
       OFFSET ${offset}
     `;

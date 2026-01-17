@@ -162,21 +162,14 @@ export function isDevelopment(): boolean {
  * In development, allows mock users for testing
  */
 export async function validateInitDataWithDevFallback(initData: string): Promise<ValidationResult> {
-  // TEMP: Skip validation, just extract user
-  const user = extractUser(initData);
-  if (user) {
-    console.log('[Auth] TEMP: Skipping validation, user id:', user.id);
-    return { valid: true, user };
-  }
-
-  // Fallback to real validation
+  // Real validation first
   const result = await validateInitData(initData);
 
   if (result.valid) {
     return result;
   }
 
-  // In development, allow mock users
+  // In development, allow mock users as fallback
   if (isDevelopment()) {
     const user = extractUser(initData);
     if (user) {

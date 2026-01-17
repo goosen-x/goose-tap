@@ -48,12 +48,16 @@ export function dbRowToGameState(row: DbUser): GameState {
   };
 }
 
+// Referral bonus amount
+const REFERRAL_BONUS = 10000;
+
 // Get user by telegram_id, create if not exists
 export async function getOrCreateUser(
   telegramId: number,
   username?: string,
   firstName?: string,
-  photoUrl?: string
+  photoUrl?: string,
+  referredBy?: number
 ): Promise<DbUser> {
   // Try to find existing user
   const { rows } = await sql<DbUser>`
@@ -78,14 +82,61 @@ export async function getOrCreateUser(
     return user;
   }
 
-  // Create new user
+  // Create new user with referred_by
   const { rows: newRows } = await sql<DbUser>`
-    INSERT INTO users (telegram_id, username, first_name, photo_url)
-    VALUES (${telegramId}, ${username ?? null}, ${firstName ?? null}, ${photoUrl ?? null})
+    INSERT INTO users (telegram_id, username, first_name, photo_url, referred_by)
+    VALUES (${telegramId}, ${username ?? null}, ${firstName ?? null}, ${photoUrl ?? null}, ${referredBy ?? null})
     RETURNING *
   `;
 
-  return newRows[0];
+  const newUser = newRows[0];
+
+  // If referred by someone, award bonus to referrer
+  if (referredBy && referredBy !== telegramId) {
+    await processReferralBonus(referredBy, newUser);
+  }
+
+  return newUser;
+}
+
+// Process referral bonus for the referrer
+async function processReferralBonus(referrerId: number, newUser: DbUser): Promise<void> {
+  try {
+    // Get referrer
+    const { rows: referrerRows } = await sql<DbUser>`
+      SELECT * FROM users WHERE telegram_id = ${referrerId}
+    `;
+
+    if (referrerRows.length === 0) {
+      console.log('[Referral] Referrer not found:', referrerId);
+      return;
+    }
+
+    const referrer = referrerRows[0];
+
+    // Create new referral entry
+    const newReferral = {
+      id: `ref-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      username: newUser.username || undefined,
+      firstName: newUser.first_name || 'Anonymous',
+      joinedAt: Date.now(),
+    };
+
+    // Update referrer's referrals array and add bonus coins
+    const updatedReferrals = [...(referrer.referrals ?? []), newReferral];
+
+    await sql`
+      UPDATE users SET
+        referrals = ${JSON.stringify(updatedReferrals)}::jsonb,
+        coins = coins + ${REFERRAL_BONUS},
+        updated_at = NOW()
+      WHERE telegram_id = ${referrerId}
+    `;
+
+    console.log('[Referral] Bonus awarded to referrer:', referrerId, 'for new user:', newUser.telegram_id);
+  } catch (error) {
+    console.error('[Referral] Error processing referral bonus:', error);
+  }
 }
 
 // Update user game state
