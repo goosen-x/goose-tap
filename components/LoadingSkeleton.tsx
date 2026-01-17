@@ -24,49 +24,62 @@ function GooseLogo({ className }: { className?: string }) {
   );
 }
 
-// Skeleton header
+// Skeleton header - matches Header.tsx exactly
 function HeaderSkeleton() {
   return (
     <header className="flex shrink-0 items-center justify-between border-b bg-background px-4 py-2">
       <div className="flex items-center gap-2">
+        {/* Avatar h-8 w-8 */}
         <div className="h-8 w-8 rounded-full bg-secondary animate-pulse" />
-        <div className="space-y-1">
-          <div className="h-4 w-20 rounded bg-secondary animate-pulse" />
-          <div className="h-3 w-12 rounded bg-secondary animate-pulse" />
+        <div>
+          {/* Name text-sm leading-tight */}
+          <div className="h-[1.25rem] w-20 rounded bg-secondary animate-pulse" />
+          {/* Level text-xs mt-0 */}
+          <div className="h-[1rem] w-10 rounded bg-secondary animate-pulse mt-0.5" />
         </div>
       </div>
-      <div className="flex flex-col items-end gap-1">
-        <div className="h-6 w-16 rounded bg-secondary animate-pulse" />
-        <div className="h-3 w-12 rounded bg-secondary animate-pulse" />
+      <div className="flex flex-col items-end">
+        {/* Badge with coins */}
+        <div className="h-[1.625rem] w-20 rounded-full bg-secondary animate-pulse" />
+        {/* Coins per hour text-[10px] */}
+        <div className="h-[0.875rem] w-14 rounded bg-secondary animate-pulse mt-0.5" />
       </div>
     </header>
   );
 }
 
-// Skeleton bottom nav
+// Skeleton bottom nav - matches BottomNav.tsx exactly (5 items)
 function BottomNavSkeleton() {
   return (
     <nav className="flex shrink-0 items-center justify-around border-t bg-background px-2 py-2">
-      {[1, 2, 3, 4].map((i) => (
-        <div key={i} className="flex flex-col items-center gap-1 px-4 py-1">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className="flex flex-1 flex-col items-center justify-center gap-0.5 py-1 rounded-lg">
+          {/* Icon h-5 w-5 */}
           <div className="h-5 w-5 rounded bg-secondary animate-pulse" />
-          <div className="h-3 w-10 rounded bg-secondary animate-pulse" />
+          {/* Label text-xs */}
+          <div className="h-[1rem] w-8 rounded bg-secondary animate-pulse" />
         </div>
       ))}
     </nav>
   );
 }
 
-// Skeleton energy bar
+// Skeleton energy bar - matches page.tsx Card exactly
 function EnergyBarSkeleton() {
   return (
     <div className="shrink-0 px-4 pb-4">
       <Card className="p-4">
-        <div className="flex items-center justify-between mb-2">
-          <div className="h-4 w-20 rounded bg-secondary animate-pulse" />
-          <div className="h-4 w-16 rounded bg-secondary animate-pulse" />
+        <div className="flex items-center justify-between text-sm mb-2">
+          {/* Energy: icon + numbers */}
+          <div className="flex items-center gap-1">
+            <div className="h-4 w-4 rounded bg-secondary animate-pulse" />
+            <div className="h-[1.25rem] w-16 rounded bg-secondary animate-pulse" />
+          </div>
+          {/* Coins per tap */}
+          <div className="h-[1.25rem] w-14 rounded bg-secondary animate-pulse" />
         </div>
-        <div className="h-2 w-full rounded bg-secondary animate-pulse" />
+        {/* Progress bar h-2 */}
+        <div className="h-2 w-full rounded-full bg-secondary animate-pulse" />
       </Card>
     </div>
   );
