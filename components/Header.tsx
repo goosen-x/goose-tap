@@ -8,7 +8,7 @@ import { Coins } from 'lucide-react';
 
 export function Header() {
   const { user } = useTelegram();
-  const { coins, coinsPerHour, level, isLoaded } = useGame();
+  const { coins, coinsPerHour, level, isLoaded, error } = useGame();
 
   // Get initials for avatar fallback
   const initials = user?.first_name
@@ -45,6 +45,11 @@ export function Header() {
           <p className="text-xs text-muted-foreground">
             Lvl {level} {user?.id && <span className="opacity-50">#{user.id}</span>}
           </p>
+          {error && (
+            <p className="text-[10px] text-destructive truncate max-w-[150px]">
+              {error}
+            </p>
+          )}
         </div>
       </div>
       <div className="flex flex-col items-end">
