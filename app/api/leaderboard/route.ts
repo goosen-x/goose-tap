@@ -3,6 +3,9 @@ import { validateInitDataWithDevFallback } from '@/lib/telegram-auth';
 import { sql } from '@/lib/db';
 import { LeaderboardEntry, LeaderboardResponse } from '@/types/game';
 
+// Dev user ID to exclude from public leaderboard
+const DEV_USER_ID = 123456789;
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -21,6 +24,7 @@ export async function GET(request: Request) {
 
     // Get top players with pagination
     // Use subquery to ensure ROW_NUMBER calculates global rank before pagination
+    // Exclude dev user from public leaderboard
     const { rows: leaderboardRows } = await sql<{
       telegram_id: number;
       first_name: string | null;
@@ -40,7 +44,7 @@ export async function GET(request: Request) {
           level,
           ROW_NUMBER() OVER (ORDER BY coins DESC) as rank
         FROM users
-        WHERE coins > 0
+        WHERE coins > 0 AND telegram_id != ${DEV_USER_ID}
       ) ranked
       ORDER BY rank
       LIMIT ${limit + 1}
@@ -63,6 +67,7 @@ export async function GET(request: Request) {
     }));
 
     // Get current user's rank if initData provided
+    // Exclude dev user from rank calculation
     let currentUser: LeaderboardResponse['currentUser'] = null;
     if (currentTelegramId) {
       const { rows: userRows } = await sql<{
@@ -71,7 +76,7 @@ export async function GET(request: Request) {
         level: number;
       }>`
         SELECT
-          (SELECT COUNT(*) + 1 FROM users WHERE coins > u.coins) as rank,
+          (SELECT COUNT(*) + 1 FROM users WHERE coins > u.coins AND telegram_id != ${DEV_USER_ID}) as rank,
           u.coins,
           u.level
         FROM users u
@@ -87,9 +92,9 @@ export async function GET(request: Request) {
       }
     }
 
-    // Get total players count
+    // Get total players count (exclude dev user)
     const { rows: countRows } = await sql<{ total: number }>`
-      SELECT COUNT(*) as total FROM users WHERE coins > 0
+      SELECT COUNT(*) as total FROM users WHERE coins > 0 AND telegram_id != ${DEV_USER_ID}
     `;
     const totalPlayers = Number(countRows[0]?.total || 0);
 
