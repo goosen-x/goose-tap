@@ -96,14 +96,13 @@ export function LoadingSkeleton({ message = 'Loading...' }: LoadingSkeletonProps
 
       <main className="flex flex-1 flex-col items-center justify-center">
         {/* Animated goose */}
-        <div className="relative">
-          {/* Pulsing glow behind */}
-          <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" style={{ animationDuration: '2s' }} />
+        <div className="relative flex items-center justify-center">
+          {/* Pulsing glow from center */}
+          <div className="absolute h-32 w-32 rounded-full bg-primary/20 animate-ping" style={{ animationDuration: '2s' }} />
+          <div className="absolute h-32 w-32 rounded-full bg-primary/10 animate-pulse" />
 
-          {/* Bouncing goose */}
-          <div className="relative animate-bounce" style={{ animationDuration: '1s' }}>
-            <GooseLogo className="h-32 w-32 text-foreground" />
-          </div>
+          {/* Static goose */}
+          <GooseLogo className="relative h-32 w-32 text-foreground" />
         </div>
 
         {/* Loading message */}
