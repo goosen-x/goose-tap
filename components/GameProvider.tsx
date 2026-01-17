@@ -47,6 +47,7 @@ export function GameProvider({ children }: GameProviderProps) {
           dailyStreak: gameState.dailyStreak,
         } : null}
         onUpdateState={gameState.devUpdateState}
+        onSync={gameState.forceSync}
         initData={gameState.initData}
       />
     </GameContext.Provider>

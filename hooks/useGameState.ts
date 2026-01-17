@@ -81,6 +81,8 @@ export interface UseGameStateResult {
   getTaskProgress: (taskId: string) => number;
   // Dev-only: direct state update for testing
   devUpdateState: (updates: Partial<GameState>) => void;
+  // Force sync from server (clears localStorage)
+  forceSync: () => void;
   // For DevPanel
   initData: string;
 }
@@ -580,6 +582,21 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     }, 0);
   }, []);
 
+  // Force sync from server - clears localStorage and reloads state
+  const forceSync = useCallback(() => {
+    if (!initDataRef.current) return;
+    // Clear localStorage to force fresh load
+    localStorage.removeItem('goose-tap-state');
+    // Reload from server
+    loadGame(initDataRef.current).then(response => {
+      if (response.success && response.state) {
+        setState(response.state);
+        saveGameState(response.state);
+        console.log('[forceSync] State synced from server');
+      }
+    }).catch(console.error);
+  }, []);
+
   // Derived values - memoized to prevent recalculation on every render
   const levelData = useMemo(() => getLevelData(state.level), [state.level]);
   const nextLevelData = useMemo(() => getNextLevelData(state.level), [state.level]);
@@ -637,6 +654,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     isTaskCompleted,
     getTaskProgress,
     devUpdateState,
+    forceSync,
     initData,
   }), [
     state,
@@ -663,6 +681,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     isTaskCompleted,
     getTaskProgress,
     devUpdateState,
+    forceSync,
     initData,
   ]);
 }
