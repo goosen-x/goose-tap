@@ -115,10 +115,28 @@ export default function Home() {
 
   if (!isMounted || !isLoaded) {
     return (
-      <div className="flex flex-1 items-center justify-center bg-background">
-        <div className="text-center">
-          <GooseLogo className="mb-4 h-16 w-16 mx-auto text-foreground" />
-          <p className="text-muted-foreground">Loading...</p>
+      <div className="flex flex-1 flex-col justify-between bg-background min-h-full">
+        <main className="flex flex-1 flex-col items-center justify-center">
+          <div className="relative flex items-center justify-center">
+            {/* Pulsing glow from center */}
+            <div className="absolute h-56 w-56 rounded-full bg-primary/20 animate-ping" style={{ animationDuration: '2s' }} />
+            <div className="absolute h-56 w-56 rounded-full bg-primary/10 animate-pulse" />
+            {/* Static goose */}
+            <GooseLogo className="relative h-56 w-56 text-foreground" />
+          </div>
+        </main>
+        {/* Skeleton energy bar */}
+        <div className="shrink-0 px-4 pb-4">
+          <Card className="p-4">
+            <div className="flex items-center justify-between text-sm mb-2">
+              <div className="flex items-center gap-1">
+                <div className="h-4 w-4 rounded bg-secondary animate-pulse" />
+                <div className="h-[1.25rem] w-16 rounded bg-secondary animate-pulse" />
+              </div>
+              <div className="h-[1.25rem] w-14 rounded bg-secondary animate-pulse" />
+            </div>
+            <div className="h-2 w-full rounded-full bg-secondary animate-pulse" />
+          </Card>
         </div>
       </div>
     );
