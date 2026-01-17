@@ -13,10 +13,31 @@ const REFERRAL_BONUS = 10000;
 const EARNINGS_PERCENTAGE = 10;
 
 export default function FriendsPage() {
-  const { referrals } = useGame();
+  const { referrals, isLoaded } = useGame();
   const { webApp, user, hapticNotification } = useTelegram();
 
   const totalEarned = referrals.length * REFERRAL_BONUS;
+
+  // Show skeleton until data is loaded (prevents hydration mismatch)
+  if (!isLoaded) {
+    return (
+      <div className="flex flex-1 flex-col bg-background">
+        <div className="p-4">
+          <Card className="p-4">
+            <div className="h-5 w-40 bg-secondary rounded animate-pulse mb-3" />
+            <div className="space-y-2">
+              <div className="h-4 w-32 bg-secondary rounded animate-pulse" />
+              <div className="h-4 w-36 bg-secondary rounded animate-pulse" />
+            </div>
+          </Card>
+          <div className="mt-4 flex gap-2">
+            <div className="flex-1 h-10 bg-secondary rounded animate-pulse" />
+            <div className="h-10 w-10 bg-secondary rounded animate-pulse" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleInvite = () => {
     const userId = user?.id || 'demo';

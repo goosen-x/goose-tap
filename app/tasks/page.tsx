@@ -11,8 +11,22 @@ import { ListTodo, Calendar, Share2 } from 'lucide-react';
 type FilterType = 'all' | 'daily' | 'social';
 
 export default function TasksPage() {
-  const { completeTask, isTaskCompleted, getTaskProgress } = useGame();
+  const { completeTask, isTaskCompleted, getTaskProgress, isLoaded } = useGame();
   const { webApp } = useTelegram();
+
+  // Show skeleton until data is loaded (prevents hydration mismatch)
+  if (!isLoaded) {
+    return (
+      <div className="flex flex-1 flex-col bg-background p-4">
+        <div className="h-10 w-full bg-secondary rounded animate-pulse mb-4" />
+        <div className="space-y-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-20 w-full bg-secondary/50 rounded-lg animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const handleAction = (action?: string) => {
     if (!action) return;

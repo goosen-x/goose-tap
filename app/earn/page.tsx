@@ -34,8 +34,38 @@ export default function EarnPage() {
     levelData,
     nextLevelData,
     levelProgress,
+    isLoaded,
   } = useGame();
   const { hapticNotification } = useTelegram();
+
+  // Show skeleton until data is loaded (prevents hydration mismatch)
+  if (!isLoaded) {
+    return (
+      <div className="flex flex-1 flex-col bg-background overflow-auto">
+        <Card className="mx-4 mt-4 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className="h-10 w-10 rounded-full bg-secondary animate-pulse" />
+              <div>
+                <div className="h-4 w-16 bg-secondary rounded animate-pulse mb-1" />
+                <div className="h-3 w-12 bg-secondary rounded animate-pulse" />
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="h-4 w-12 bg-secondary rounded animate-pulse mb-1 ml-auto" />
+              <div className="h-3 w-16 bg-secondary rounded animate-pulse ml-auto" />
+            </div>
+          </div>
+          <div className="h-2 w-full bg-secondary rounded animate-pulse" />
+        </Card>
+        <div className="grid grid-cols-3 gap-2 p-4 pb-2">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="p-2 h-16 animate-pulse bg-secondary/50" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const getFilteredUpgrades = (tab: TabType) => {
     return UPGRADES.filter((upgrade) => upgrade.category === tab);
