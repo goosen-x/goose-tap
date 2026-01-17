@@ -101,8 +101,19 @@ export function stopAutosave(): void {
   }
 }
 
-// Format numbers for display
+// Format numbers for display (with space separator)
 export function formatNumber(num: number): string {
   // Format with space as thousands separator
   return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
+// Format numbers compactly (10K, 2M)
+export function formatCompact(num: number): string {
+  if (num >= 1_000_000) {
+    return `${Math.round(num / 1_000_000)}M`;
+  }
+  if (num >= 1_000) {
+    return `${Math.round(num / 1_000)}K`;
+  }
+  return num.toString();
 }
