@@ -7,6 +7,7 @@ interface ReferralInfo {
   telegramId: number;
   username: string | null;
   firstName: string;
+  photoUrl: string | null;
   joinedAt: string;
 }
 
@@ -68,7 +69,7 @@ export async function POST(request: Request) {
 
     // Get tier 1 referrals (users who have this user as referrer_t1)
     const { rows: tier1Rows } = await sql<ReferralInfo>`
-      SELECT telegram_id as "telegramId", username, first_name as "firstName", created_at as "joinedAt"
+      SELECT telegram_id as "telegramId", username, first_name as "firstName", photo_url as "photoUrl", created_at as "joinedAt"
       FROM users
       WHERE referrer_t1 = ${telegramId}
       ORDER BY created_at DESC
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
 
     // Get tier 2 referrals (users who have this user as referrer_t2)
     const { rows: tier2Rows } = await sql<ReferralInfo>`
-      SELECT telegram_id as "telegramId", username, first_name as "firstName", created_at as "joinedAt"
+      SELECT telegram_id as "telegramId", username, first_name as "firstName", photo_url as "photoUrl", created_at as "joinedAt"
       FROM users
       WHERE referrer_t2 = ${telegramId}
       ORDER BY created_at DESC
@@ -86,7 +87,7 @@ export async function POST(request: Request) {
 
     // Get tier 3 referrals (users who have this user as referrer_t3)
     const { rows: tier3Rows } = await sql<ReferralInfo>`
-      SELECT telegram_id as "telegramId", username, first_name as "firstName", created_at as "joinedAt"
+      SELECT telegram_id as "telegramId", username, first_name as "firstName", photo_url as "photoUrl", created_at as "joinedAt"
       FROM users
       WHERE referrer_t3 = ${telegramId}
       ORDER BY created_at DESC
@@ -100,6 +101,7 @@ export async function POST(request: Request) {
           telegramId: r.telegramId,
           username: r.username,
           firstName: r.firstName || 'Anonymous',
+          photoUrl: r.photoUrl,
           joinedAt: r.joinedAt,
         })),
       },
@@ -109,6 +111,7 @@ export async function POST(request: Request) {
           telegramId: r.telegramId,
           username: r.username,
           firstName: r.firstName || 'Anonymous',
+          photoUrl: r.photoUrl,
           joinedAt: r.joinedAt,
         })),
       },
@@ -118,6 +121,7 @@ export async function POST(request: Request) {
           telegramId: r.telegramId,
           username: r.username,
           firstName: r.firstName || 'Anonymous',
+          photoUrl: r.photoUrl,
           joinedAt: r.joinedAt,
         })),
       },

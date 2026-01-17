@@ -16,6 +16,7 @@ interface ReferralInfo {
   telegramId: number;
   username: string | null;
   firstName: string;
+  photoUrl: string | null;
   joinedAt: string;
 }
 
@@ -56,22 +57,42 @@ function getTimeAgo(date: Date): string {
   return `${Math.floor(diffDays / 30)}mo`;
 }
 
-function AvatarStack({ count, max = 5 }: { count: number; max?: number }) {
-  const displayed = Math.min(count, max);
-  const remaining = count - displayed;
+function Avatar({ photoUrl, name, size = 'md' }: { photoUrl: string | null; name: string; size?: 'sm' | 'md' }) {
+  const sizeClasses = size === 'sm' ? 'w-8 h-8' : 'w-10 h-10';
+  const iconSize = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4';
 
-  if (count === 0) return null;
+  if (photoUrl) {
+    return (
+      <img
+        src={photoUrl}
+        alt={name}
+        className={cn(sizeClasses, "rounded-full object-cover border-2 border-background")}
+      />
+    );
+  }
+
+  // Generate color from name
+  const colors = ['bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 'bg-pink-500'];
+  const colorIndex = name.charCodeAt(0) % colors.length;
+
+  return (
+    <div className={cn(sizeClasses, "rounded-full border-2 border-background flex items-center justify-center", colors[colorIndex])}>
+      <span className="text-white font-medium text-xs">{name.charAt(0).toUpperCase()}</span>
+    </div>
+  );
+}
+
+function AvatarStack({ referrals, max = 5 }: { referrals: ReferralInfo[]; max?: number }) {
+  const displayed = referrals.slice(0, max);
+  const remaining = referrals.length - displayed.length;
+
+  if (referrals.length === 0) return null;
 
   return (
     <div className="flex items-center">
       <div className="flex -space-x-2">
-        {Array.from({ length: displayed }).map((_, i) => (
-          <div
-            key={i}
-            className="w-8 h-8 rounded-full bg-secondary border-2 border-background flex items-center justify-center"
-          >
-            <Users className="w-3.5 h-3.5 text-muted-foreground" />
-          </div>
+        {displayed.map((r, i) => (
+          <Avatar key={r.telegramId} photoUrl={r.photoUrl} name={r.firstName} size="sm" />
         ))}
       </div>
       {remaining > 0 && (
@@ -86,9 +107,7 @@ function ReferralRow({ referral }: { referral: ReferralInfo }) {
 
   return (
     <div className="flex items-center gap-3 py-2 px-3">
-      <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
-        <Users className="w-4 h-4 text-muted-foreground" />
-      </div>
+      <Avatar photoUrl={referral.photoUrl} name={referral.firstName} size="sm" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">
           {referral.firstName || 'Anonymous'}
@@ -271,7 +290,7 @@ export default function FriendsPage() {
       <div className="p-4 pb-3">
         <Card className="p-4">
           <div className="flex items-start justify-between mb-4">
-            <AvatarStack count={totalReferrals} />
+            <AvatarStack referrals={[...tier1.referrals, ...tier2.referrals, ...tier3.referrals]} />
             {totalReferrals === 0 && (
               <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
                 <Users className="w-5 h-5 text-muted-foreground" />
