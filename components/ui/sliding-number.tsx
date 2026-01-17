@@ -98,7 +98,7 @@ export function SlidingNumber({
   // Calculate positions where spaces should be inserted (every 3 digits from right)
   const getSpaceBefore = (index: number) => {
     const posFromRight = integerDigits.length - index;
-    return posFromRight > 1 && posFromRight % 3 === 1;
+    return index > 0 && posFromRight % 3 === 0;
   };
 
   return (
