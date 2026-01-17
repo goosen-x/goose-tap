@@ -2,7 +2,6 @@
 
 import { useTelegram } from '@/hooks/useTelegram';
 import { useGame } from '@/components/GameProvider';
-import { formatNumber } from '@/lib/storage';
 import { Badge } from '@/components/ui/badge';
 import { Coins, User } from 'lucide-react';
 
@@ -39,12 +38,12 @@ export function Header() {
       </div>
       <div className="flex flex-col items-end">
         <Badge variant="secondary" className="px-2 py-0.5">
-          <Coins className="h-3 w-3 mr-1" />
-          {formatNumber(coins)}
+          {coins.toLocaleString()}
+          <Coins className="h-3 w-3 ml-1" />
         </Badge>
         {coinsPerHour > 0 && (
           <p className="text-[10px] text-muted-foreground mt-0.5">
-            +{formatNumber(coinsPerHour)}/hr
+            +{coinsPerHour.toLocaleString()}/hr
           </p>
         )}
       </div>
