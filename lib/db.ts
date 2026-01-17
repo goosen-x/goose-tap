@@ -1,5 +1,5 @@
 import { sql } from '@vercel/postgres';
-import { GameState, UserUpgrade, UserTask, Referral } from '@/types/game';
+import { GameState, UserUpgrade, UserTask, Referral, calculateLevelFromXP } from '@/types/game';
 
 // Database user row type
 export interface DbUser {
@@ -29,14 +29,18 @@ export interface DbUser {
 
 // Convert DB row to GameState
 export function dbRowToGameState(row: DbUser): GameState {
+  const xp = Number(row.xp) || 0;
+  // Always calculate level from XP to ensure consistency
+  const calculatedLevel = calculateLevelFromXP(xp);
+
   return {
     coins: Number(row.coins),
-    xp: Number(row.xp) || 0,
+    xp,
     energy: row.energy,
     maxEnergy: row.max_energy,
     coinsPerTap: row.coins_per_tap,
     coinsPerHour: row.coins_per_hour,
-    level: row.level,
+    level: calculatedLevel,
     totalTaps: row.total_taps || 0,
     upgrades: row.upgrades ?? [],
     tasks: row.tasks ?? [],
