@@ -111,9 +111,21 @@ body {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
-/* Disable pinch-zoom and double-tap zoom */
+/* Disable text selection, touch callouts, and tap highlight for mobile app feel */
 * {
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
   touch-action: manipulation;
+}
+
+/* Allow text selection in input fields */
+input,
+textarea,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* Utility for tap effect animation */
