@@ -28,6 +28,7 @@ export function useLeaderboard(initData: string | null): UseLeaderboardResult {
   const offsetRef = useRef(0);
 
   const fetchPage = useCallback(async (offset: number, isRefresh: boolean) => {
+    console.log('[Leaderboard] fetchPage called, initData:', initData ? 'present' : 'empty');
     if (!initData) {
       setIsLoading(false);
       return;
@@ -53,6 +54,7 @@ export function useLeaderboard(initData: string | null): UseLeaderboardResult {
       }
 
       const result: LeaderboardResponse = await response.json();
+      console.log('[Leaderboard] API result:', result.leaderboard.length, 'entries');
 
       if (isRefresh) {
         setEntries(result.leaderboard);

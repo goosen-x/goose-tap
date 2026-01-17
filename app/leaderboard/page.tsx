@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useLeaderboard } from '@/hooks/useLeaderboard';
 import { useTelegram } from '@/hooks/useTelegram';
+import { useGame } from '@/components/GameProvider';
 import { LeaderboardCard } from '@/components/LeaderboardCard';
 import { formatNumber } from '@/lib/storage';
 import { Card } from '@/components/ui/card';
@@ -30,6 +31,7 @@ function LeaderboardSkeleton() {
 
 export default function LeaderboardPage() {
   const { initData, user } = useTelegram();
+  const { coins, level } = useGame();
   const {
     entries,
     currentUser,
@@ -91,7 +93,7 @@ export default function LeaderboardPage() {
               </div>
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Your Coins</p>
-                <span className="text-lg font-semibold flex items-center justify-end"><SlidingNumber value={currentUser.coins} /></span>
+                <span className="text-lg font-semibold flex items-center justify-end"><SlidingNumber value={coins} /></span>
               </div>
             </div>
           </Card>
@@ -134,13 +136,20 @@ export default function LeaderboardPage() {
 
         {!isLoading && !error && entries.length > 0 && (
           <div className="flex flex-col gap-2">
-            {entries.map((entry) => (
-              <LeaderboardCard
-                key={entry.telegramId}
-                entry={entry}
-                isCurrentUser={entry.telegramId === user?.id}
-              />
-            ))}
+            {entries.map((entry) => {
+              const isCurrentUser = entry.telegramId === user?.id;
+              // Use local state for current user to show real-time data
+              const displayEntry = isCurrentUser
+                ? { ...entry, coins, level }
+                : entry;
+              return (
+                <LeaderboardCard
+                  key={entry.telegramId}
+                  entry={displayEntry}
+                  isCurrentUser={isCurrentUser}
+                />
+              );
+            })}
 
             {/* Load more trigger */}
             {hasMore && (

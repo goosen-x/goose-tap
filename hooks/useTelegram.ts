@@ -5,6 +5,21 @@ import { useEffect, useSyncExternalStore, useCallback } from 'react';
 // Global flag to prevent multiple initializations
 let isInitialized = false;
 
+// Mock user for development mode
+const DEV_USER: TelegramWebAppUser = {
+  id: 123456789,
+  first_name: 'Dev',
+  last_name: 'User',
+  username: 'devuser',
+  photo_url: undefined,
+};
+
+// Create mock initData for development
+function getDevInitData(): string {
+  const user = encodeURIComponent(JSON.stringify(DEV_USER));
+  return `user=${user}&auth_date=${Math.floor(Date.now() / 1000)}`;
+}
+
 function getWebApp() {
   if (typeof window === 'undefined') return null;
   return window.Telegram?.WebApp ?? null;
@@ -64,11 +79,14 @@ export function useTelegram() {
     }
   }, [webApp]);
 
+  // In development without valid Telegram data, use mock data
+  const isDev = process.env.NODE_ENV === 'development' && (!webApp || !webApp.initData);
+
   return {
     webApp,
-    isReady: webApp !== null,
-    initData: webApp?.initData ?? '',
-    user: webApp?.initDataUnsafe?.user,
+    isReady: webApp !== null || isDev,
+    initData: webApp?.initData || (isDev ? getDevInitData() : ''),
+    user: webApp?.initDataUnsafe?.user || (isDev ? DEV_USER : undefined),
     startParam: webApp?.initDataUnsafe?.start_param,
     colorScheme: webApp?.colorScheme,
     themeParams: webApp?.themeParams,
