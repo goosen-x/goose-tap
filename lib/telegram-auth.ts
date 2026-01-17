@@ -1,5 +1,13 @@
 import crypto from 'crypto';
 
+// Telegram's Ed25519 public keys for signature verification
+const TELEGRAM_PUBLIC_KEYS = {
+  // Production environment
+  production: Buffer.from('e7bf03a2fa4602af4580703d88dda5bb59f32ed8b02a56c187fe7d34caed242d', 'hex'),
+  // Test environment
+  test: Buffer.from('40055058a4ee38156a06562e52eece92a771bcd8346a8c4615cb7376eddf72ec', 'hex'),
+};
+
 export interface TelegramUser {
   id: number;
   is_bot?: boolean;
@@ -18,97 +26,156 @@ export interface ValidationResult {
 }
 
 /**
- * Validates Telegram Mini App initData using HMAC-SHA256
- *
- * Algorithm:
- * 1. Parse initData as URLSearchParams
- * 2. Extract hash
- * 3. Sort remaining parameters alphabetically
- * 4. Create data_check_string (key=value\n...)
- * 5. Calculate secret_key = HMAC-SHA256("WebAppData", BOT_TOKEN)
- * 6. Calculate hash = HMAC-SHA256(data_check_string, secret_key)
- * 7. Compare with provided hash
+ * Validates Telegram Mini App initData
+ * Supports both:
+ * - Ed25519 signature (new method, uses Telegram's public key)
+ * - HMAC-SHA256 hash (legacy method, uses bot token)
  */
 export function validateInitData(initData: string): ValidationResult {
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
-
-  if (!botToken) {
-    return { valid: false, error: 'Bot token not configured' };
-  }
-
   if (!initData || initData.trim() === '') {
     return { valid: false, error: 'Empty initData' };
   }
 
   try {
     const params = new URLSearchParams(initData);
+    const signature = params.get('signature');
     const hash = params.get('hash');
 
-    if (!hash) {
-      return { valid: false, error: 'No hash in initData' };
+    // Determine which validation method to use
+    if (signature) {
+      return validateWithSignature(params, signature);
+    } else if (hash) {
+      return validateWithHash(params, hash);
+    } else {
+      return { valid: false, error: 'No signature or hash in initData' };
     }
-
-    // Remove hash from params for verification
-    params.delete('hash');
-
-    // Sort parameters alphabetically and create data_check_string
-    const sortedParams = Array.from(params.entries())
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([key, value]) => `${key}=${value}`)
-      .join('\n');
-
-    // Calculate secret_key = HMAC-SHA256(BOT_TOKEN, "WebAppData")
-    const secretKey = crypto
-      .createHmac('sha256', botToken)
-      .update('WebAppData')
-      .digest();
-
-    // Calculate hash = HMAC-SHA256(data_check_string, secret_key)
-    const calculatedHash = crypto
-      .createHmac('sha256', secretKey)
-      .update(sortedParams)
-      .digest('hex');
-
-    if (calculatedHash !== hash) {
-      console.error('[Auth] Hash mismatch:', {
-        provided: hash?.slice(0, 16) + '...',
-        calculated: calculatedHash?.slice(0, 16) + '...',
-        paramsCount: Array.from(params.entries()).length,
-        hasUser: !!params.get('user'),
-        hasAuthDate: !!params.get('auth_date'),
-        sortedParams: sortedParams.slice(0, 200) + '...',
-        tokenLength: botToken.length,
-      });
-      return { valid: false, error: 'Invalid hash' };
-    }
-
-    // Check auth_date is not too old (6 hours max)
-    const authDate = params.get('auth_date');
-    if (authDate) {
-      const authTimestamp = parseInt(authDate, 10) * 1000;
-      const now = Date.now();
-      const maxAge = 6 * 60 * 60 * 1000; // 6 hours in ms
-
-      if (now - authTimestamp > maxAge) {
-        return { valid: false, error: 'initData expired' };
-      }
-    }
-
-    // Extract user data
-    const userJson = params.get('user');
-    if (!userJson) {
-      return { valid: false, error: 'No user in initData' };
-    }
-
-    const user = JSON.parse(userJson) as TelegramUser;
-
-    return { valid: true, user };
   } catch (error) {
     return {
       valid: false,
       error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
+}
+
+/**
+ * Validate using Ed25519 signature (new Telegram method)
+ */
+function validateWithSignature(params: URLSearchParams, signature: string): ValidationResult {
+  // Remove signature from params for verification
+  params.delete('signature');
+
+  // Sort parameters alphabetically and create data_check_string
+  const sortedParams = Array.from(params.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([key, value]) => `${key}=${value}`)
+    .join('\n');
+
+  // Convert base64url signature to buffer
+  const signatureBuffer = Buffer.from(
+    signature.replace(/-/g, '+').replace(/_/g, '/'),
+    'base64'
+  );
+
+  // Try production key first, then test key
+  const publicKeys = [TELEGRAM_PUBLIC_KEYS.production, TELEGRAM_PUBLIC_KEYS.test];
+  let isValid = false;
+
+  for (const publicKey of publicKeys) {
+    try {
+      const keyObject = crypto.createPublicKey({
+        key: Buffer.concat([
+          // Ed25519 public key ASN.1 prefix
+          Buffer.from('302a300506032b6570032100', 'hex'),
+          publicKey,
+        ]),
+        format: 'der',
+        type: 'spki',
+      });
+
+      isValid = crypto.verify(
+        null,
+        Buffer.from(sortedParams),
+        keyObject,
+        signatureBuffer
+      );
+
+      if (isValid) break;
+    } catch {
+      continue;
+    }
+  }
+
+  if (!isValid) {
+    console.error('[Auth] Signature verification failed');
+    return { valid: false, error: 'Invalid signature' };
+  }
+
+  return extractUserFromParams(params);
+}
+
+/**
+ * Validate using HMAC-SHA256 hash (legacy method)
+ */
+function validateWithHash(params: URLSearchParams, hash: string): ValidationResult {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+
+  if (!botToken) {
+    return { valid: false, error: 'Bot token not configured' };
+  }
+
+  // Remove hash from params for verification
+  params.delete('hash');
+
+  // Sort parameters alphabetically and create data_check_string
+  const sortedParams = Array.from(params.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([key, value]) => `${key}=${value}`)
+    .join('\n');
+
+  // Calculate secret_key = HMAC-SHA256(BOT_TOKEN, "WebAppData")
+  const secretKey = crypto
+    .createHmac('sha256', botToken)
+    .update('WebAppData')
+    .digest();
+
+  // Calculate hash = HMAC-SHA256(data_check_string, secret_key)
+  const calculatedHash = crypto
+    .createHmac('sha256', secretKey)
+    .update(sortedParams)
+    .digest('hex');
+
+  if (calculatedHash !== hash) {
+    console.error('[Auth] Hash mismatch');
+    return { valid: false, error: 'Invalid hash' };
+  }
+
+  return extractUserFromParams(params);
+}
+
+/**
+ * Extract and validate user from params after signature/hash verification
+ */
+function extractUserFromParams(params: URLSearchParams): ValidationResult {
+  // Check auth_date is not too old (6 hours max)
+  const authDate = params.get('auth_date');
+  if (authDate) {
+    const authTimestamp = parseInt(authDate, 10) * 1000;
+    const now = Date.now();
+    const maxAge = 6 * 60 * 60 * 1000; // 6 hours in ms
+
+    if (now - authTimestamp > maxAge) {
+      return { valid: false, error: 'initData expired' };
+    }
+  }
+
+  // Extract user data
+  const userJson = params.get('user');
+  if (!userJson) {
+    return { valid: false, error: 'No user in initData' };
+  }
+
+  const user = JSON.parse(userJson) as TelegramUser;
+  return { valid: true, user };
 }
 
 /**
