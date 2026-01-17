@@ -146,6 +146,10 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
 
     // If no initData, use localStorage only
     if (!initData) {
+      console.log('[GameState] No initData, using localStorage only');
+      toast.warning('No Telegram data', {
+        description: 'Using local storage only',
+      });
       setIsLoading(false);
       setIsLoaded(true);
       return;
