@@ -17,7 +17,18 @@ const DEV_USER: TelegramWebAppUser = {
 // Create mock initData for development
 function getDevInitData(): string {
   const user = encodeURIComponent(JSON.stringify(DEV_USER));
-  return `user=${user}&auth_date=${Math.floor(Date.now() / 1000)}`;
+  let initData = `user=${user}&auth_date=${Math.floor(Date.now() / 1000)}`;
+
+  // Support referral testing via URL: localhost:3000?ref=204887498
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    const refId = params.get('ref');
+    if (refId) {
+      initData += `&start_param=ref_${refId}`;
+    }
+  }
+
+  return initData;
 }
 
 function getWebApp() {

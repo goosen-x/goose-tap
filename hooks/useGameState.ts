@@ -79,6 +79,10 @@ export interface UseGameStateResult {
   getUpgradeLevel: (upgradeId: string) => number;
   isTaskCompleted: (taskId: string) => boolean;
   getTaskProgress: (taskId: string) => number;
+  // Dev-only: direct state update for testing
+  devUpdateState: (updates: Partial<GameState>) => void;
+  // For DevPanel
+  initData: string;
 }
 
 function createInitialState(): GameState {
@@ -560,6 +564,19 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     }
   }, []);
 
+  // Dev-only: direct state update for testing
+  const devUpdateState = useCallback((updates: Partial<GameState>) => {
+    if (process.env.NODE_ENV !== 'development') return;
+    setState(prev => {
+      const newState = { ...prev, ...updates };
+      saveGameState(newState);
+      if (initDataRef.current) {
+        saveGame(initDataRef.current, newState).catch(console.error);
+      }
+      return newState;
+    });
+  }, []);
+
   // Derived values - memoized to prevent recalculation on every render
   const levelData = useMemo(() => getLevelData(state.level), [state.level]);
   const nextLevelData = useMemo(() => getNextLevelData(state.level), [state.level]);
@@ -616,6 +633,8 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     getUpgradeLevel,
     isTaskCompleted,
     getTaskProgress,
+    devUpdateState,
+    initData,
   }), [
     state,
     isLoaded,
@@ -640,5 +659,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     getUpgradeLevel,
     isTaskCompleted,
     getTaskProgress,
+    devUpdateState,
+    initData,
   ]);
 }

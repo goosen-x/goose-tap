@@ -4,6 +4,7 @@ import { createContext, useContext, ReactNode } from 'react';
 import { useGameState, UseGameStateResult } from '@/hooks/useGameState';
 import { useTelegram } from '@/hooks/useTelegram';
 import { WelcomeBackModal } from '@/components/WelcomeBackModal';
+import { DevPanel } from '@/components/DevPanel';
 
 type GameContextType = UseGameStateResult;
 
@@ -27,6 +28,27 @@ export function GameProvider({ children }: GameProviderProps) {
           coinsPerHour={gameState.coinsPerHour}
         />
       )}
+      <DevPanel
+        state={gameState.isLoaded ? {
+          coins: gameState.coins,
+          xp: gameState.xp,
+          energy: gameState.energy,
+          maxEnergy: gameState.maxEnergy,
+          coinsPerTap: gameState.coinsPerTap,
+          coinsPerHour: gameState.coinsPerHour,
+          level: gameState.level,
+          totalTaps: gameState.totalTaps,
+          upgrades: gameState.upgrades,
+          tasks: gameState.tasks,
+          referrals: gameState.referrals,
+          lastEnergyUpdate: gameState.lastEnergyUpdate,
+          lastOfflineEarnings: gameState.lastOfflineEarnings,
+          lastDailyClaim: gameState.lastDailyClaim,
+          dailyStreak: gameState.dailyStreak,
+        } : null}
+        onUpdateState={gameState.devUpdateState}
+        initData={gameState.initData}
+      />
     </GameContext.Provider>
   );
 }
