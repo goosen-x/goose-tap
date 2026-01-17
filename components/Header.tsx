@@ -38,12 +38,12 @@ export function Header() {
       </div>
       <div className="flex flex-col items-end">
         <Badge variant="secondary" className="px-2 py-0.5">
-          {coins.toLocaleString()}
+          {coins.toLocaleString('ru-RU')}
           <Coins className="h-3 w-3 ml-1" />
         </Badge>
         {coinsPerHour > 0 && (
           <p className="text-[10px] text-muted-foreground mt-0.5">
-            +{coinsPerHour.toLocaleString()}/hr
+            +{coinsPerHour.toLocaleString('ru-RU')}/hr
           </p>
         )}
       </div>
