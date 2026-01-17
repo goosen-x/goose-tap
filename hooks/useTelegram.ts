@@ -40,6 +40,7 @@ export function useTelegram() {
   return {
     webApp,
     isReady: webApp !== null,
+    initData: webApp?.initData ?? '',
     user: webApp?.initDataUnsafe?.user,
     colorScheme: webApp?.colorScheme,
     themeParams: webApp?.themeParams,

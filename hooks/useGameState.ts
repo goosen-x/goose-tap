@@ -18,11 +18,47 @@ import {
   saveGameState,
   calculateOfflineEarnings,
   calculateEnergyRestoration,
-  startAutosave,
-  stopAutosave,
 } from '@/lib/storage';
+import { useGameAPI } from './useGameAPI';
 
-// Lazy initializer for useState - runs only once on first render
+export interface UseGameStateOptions {
+  initData: string;
+}
+
+export interface UseGameStateResult {
+  // State
+  coins: number;
+  energy: number;
+  maxEnergy: number;
+  coinsPerTap: number;
+  coinsPerHour: number;
+  level: number;
+  upgrades: UserUpgrade[];
+  tasks: UserTask[];
+  referrals: Referral[];
+  lastEnergyUpdate: number;
+  lastOfflineEarnings: number;
+
+  // Status
+  isLoaded: boolean;
+  isLoading: boolean;
+  error: string | null;
+  offlineEarnings: number;
+
+  // Actions
+  tap: () => void;
+  purchaseUpgrade: (upgradeId: string) => boolean;
+  completeTask: (taskId: string) => boolean;
+  addReferral: (referral: Omit<Referral, 'id'>) => void;
+  save: () => void;
+
+  // Helpers
+  getUpgradeLevel: (upgradeId: string) => number;
+  isTaskCompleted: (taskId: string) => boolean;
+  getTaskProgress: (taskId: string) => number;
+}
+
+// Create initial state from localStorage as cache
 function createInitialState(): GameState {
   if (typeof window === 'undefined') {
     return DEFAULT_GAME_STATE;
@@ -52,34 +88,58 @@ function createInitialState(): GameState {
   };
 }
 
-export function useGameState() {
-  // Use lazy initialization - function runs only on initial render
+export function useGameState(options: UseGameStateOptions): UseGameStateResult {
+  const { initData } = options;
+  const api = useGameAPI();
+
+  // State
   const [state, setState] = useState<GameState>(() => createInitialState());
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [offlineEarnings, setOfflineEarnings] = useState(0);
+
+  // Refs
   const stateRef = useRef(state);
-  const autosaveInitialized = useRef(false);
+  const initDataRef = useRef(initData);
+  const loadedFromApi = useRef(false);
 
-  // isLoaded is derived from whether we're in the browser - no need for state
-  const isLoaded = typeof window !== 'undefined';
-
-  // Keep ref in sync with state
+  // Keep refs in sync
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
 
-  // Setup autosave on mount
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (autosaveInitialized.current) return;
-    autosaveInitialized.current = true;
+    initDataRef.current = initData;
+  }, [initData]);
 
-    // Start autosave
-    startAutosave(() => stateRef.current);
+  // Load game from API on mount
+  useEffect(() => {
+    if (!initData || loadedFromApi.current) return;
 
-    return () => {
-      stopAutosave();
-      saveGameState(stateRef.current);
+    const loadFromApi = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await api.loadGame(initData);
+
+        setState(response.state);
+        setOfflineEarnings(response.offlineEarnings);
+        saveGameState(response.state); // Cache in localStorage
+        loadedFromApi.current = true;
+      } catch (err) {
+        console.error('Failed to load from API, using localStorage:', err);
+        // Keep localStorage state as fallback
+        setError(err instanceof Error ? err.message : 'Failed to load game');
+      } finally {
+        setIsLoading(false);
+        setIsLoaded(true);
+      }
     };
-  }, []);
+
+    loadFromApi();
+  }, [initData, api]);
 
   // Energy regeneration timer
   useEffect(() => {
@@ -88,11 +148,13 @@ export function useGameState() {
     const interval = setInterval(() => {
       setState((prev) => {
         if (prev.energy >= prev.maxEnergy) return prev;
-        return {
+        const newState = {
           ...prev,
           energy: Math.min(prev.energy + 1, prev.maxEnergy),
           lastEnergyUpdate: Date.now(),
         };
+        saveGameState(newState); // Cache locally
+        return newState;
       });
     }, 1000);
 
@@ -104,33 +166,57 @@ export function useGameState() {
     if (!isLoaded || state.coinsPerHour === 0) return;
 
     const interval = setInterval(() => {
-      setState((prev) => ({
-        ...prev,
-        coins: prev.coins + Math.floor(prev.coinsPerHour / 3600), // Per second
-      }));
+      setState((prev) => {
+        const newState = {
+          ...prev,
+          coins: prev.coins + Math.floor(prev.coinsPerHour / 3600), // Per second
+        };
+        saveGameState(newState); // Cache locally
+        return newState;
+      });
     }, 1000);
 
     return () => clearInterval(interval);
   }, [isLoaded, state.coinsPerHour]);
 
-  // Tap handler
+  // Periodic save to API
+  useEffect(() => {
+    if (!isLoaded || !initDataRef.current) return;
+
+    const interval = setInterval(() => {
+      api.saveGame(initDataRef.current, stateRef.current).catch(console.error);
+    }, 30000); // Save every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [isLoaded, api]);
+
+  // Tap handler with optimistic update
   const tap = useCallback(() => {
+    // Optimistic update
     setState((prev) => {
       if (prev.energy <= 0) return prev;
 
       const newCoins = prev.coins + prev.coinsPerTap;
       const newLevel = calculateLevel(newCoins);
 
-      return {
+      const newState = {
         ...prev,
         coins: newCoins,
         energy: prev.energy - 1,
         level: newLevel,
       };
+      saveGameState(newState); // Cache locally
+      return newState;
     });
-  }, []);
 
-  // Purchase upgrade
+    // Sync with API in background (debounced via batch)
+    // For performance, we don't await this
+    if (initDataRef.current) {
+      api.tap(initDataRef.current, 1).catch(console.error);
+    }
+  }, [api]);
+
+  // Purchase upgrade with optimistic update
   const purchaseUpgrade = useCallback((upgradeId: string): boolean => {
     const upgrade = UPGRADES.find((u) => u.id === upgradeId);
     if (!upgrade) return false;
@@ -159,7 +245,7 @@ export function useGameState() {
 
       success = true;
 
-      return {
+      const newState = {
         ...prev,
         coins: prev.coins - cost,
         upgrades: newUpgrades,
@@ -167,12 +253,19 @@ export function useGameState() {
         coinsPerHour: newCoinsPerHour,
         maxEnergy: newMaxEnergy,
       };
+      saveGameState(newState); // Cache locally
+      return newState;
     });
 
-    return success;
-  }, []);
+    // Sync with API in background
+    if (success && initDataRef.current) {
+      api.purchaseUpgrade(initDataRef.current, upgradeId).catch(console.error);
+    }
 
-  // Complete task
+    return success;
+  }, [api]);
+
+  // Complete task with optimistic update
   const completeTask = useCallback((taskId: string): boolean => {
     const task = TASKS.find((t) => t.id === taskId);
     if (!task) return false;
@@ -202,27 +295,43 @@ export function useGameState() {
 
       success = true;
 
-      return {
+      const newState = {
         ...prev,
         coins: prev.coins + task.reward,
         tasks: newTasks,
       };
+      saveGameState(newState); // Cache locally
+      return newState;
     });
 
+    // Sync with API in background
+    if (success && initDataRef.current) {
+      api.completeTask(initDataRef.current, taskId).catch(console.error);
+    }
+
     return success;
-  }, []);
+  }, [api]);
 
   // Add referral
   const addReferral = useCallback((referral: Omit<Referral, 'id'>): void => {
-    setState((prev) => ({
-      ...prev,
-      referrals: [
-        ...prev.referrals,
-        { ...referral, id: `ref-${Date.now()}-${Math.random().toString(36).slice(2)}` },
-      ],
-      coins: prev.coins + 10000, // Referral bonus
-    }));
-  }, []);
+    setState((prev) => {
+      const newState = {
+        ...prev,
+        referrals: [
+          ...prev.referrals,
+          { ...referral, id: `ref-${Date.now()}-${Math.random().toString(36).slice(2)}` },
+        ],
+        coins: prev.coins + 10000, // Referral bonus
+      };
+      saveGameState(newState); // Cache locally
+      return newState;
+    });
+
+    // Sync with API
+    if (initDataRef.current) {
+      api.saveGame(initDataRef.current, stateRef.current).catch(console.error);
+    }
+  }, [api]);
 
   // Get upgrade level
   const getUpgradeLevel = useCallback(
@@ -262,12 +371,18 @@ export function useGameState() {
   // Manual save
   const save = useCallback(() => {
     saveGameState(stateRef.current);
-  }, []);
+    if (initDataRef.current) {
+      api.saveGame(initDataRef.current, stateRef.current).catch(console.error);
+    }
+  }, [api]);
 
   return {
     // State
     ...state,
     isLoaded,
+    isLoading,
+    error,
+    offlineEarnings,
 
     // Actions
     tap,
