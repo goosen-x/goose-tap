@@ -110,10 +110,14 @@ export async function loadGame(initData: string): Promise<LoadGameResult> {
     const startParam = params.get('start_param')
     let referrerId: number | undefined
 
+    console.log('[loadGame] start_param:', startParam, 'user.id:', user.id)
+
     if (startParam?.startsWith('ref_')) {
       const parsedId = parseInt(startParam.slice(4), 10)
+      console.log('[loadGame] Parsed referrer ID:', parsedId)
       if (!isNaN(parsedId) && parsedId !== user.id) {
         referrerId = parsedId
+        console.log('[loadGame] Valid referrer ID set:', referrerId)
       }
     }
 

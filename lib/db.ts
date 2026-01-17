@@ -69,7 +69,8 @@ export async function getOrCreateUser(
   `;
 
   if (rows.length > 0) {
-    // Update user info if changed
+    // User already exists - referral not processed for existing users
+    console.log('[getOrCreateUser] User already exists:', telegramId, 'referredBy ignored:', referredBy)
     const user = rows[0];
     if (user.username !== username || user.first_name !== firstName || user.photo_url !== photoUrl) {
       const { rows: updatedRows } = await sql<DbUser>`
@@ -87,6 +88,7 @@ export async function getOrCreateUser(
   }
 
   // Create new user with referred_by
+  console.log('[getOrCreateUser] Creating NEW user:', telegramId, 'referredBy:', referredBy)
   const { rows: newRows } = await sql<DbUser>`
     INSERT INTO users (telegram_id, username, first_name, photo_url, referred_by)
     VALUES (${telegramId}, ${username ?? null}, ${firstName ?? null}, ${photoUrl ?? null}, ${referredBy ?? null})
@@ -97,6 +99,7 @@ export async function getOrCreateUser(
 
   // If referred by someone, award bonus to referrer
   if (referredBy && referredBy !== telegramId) {
+    console.log('[getOrCreateUser] Processing referral bonus for referrer:', referredBy)
     await processReferralBonus(referredBy, newUser);
   }
 
