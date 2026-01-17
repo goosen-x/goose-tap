@@ -20,6 +20,8 @@ export interface DbUser {
   referrals: Referral[];
   last_energy_update: Date;
   last_offline_earnings: Date;
+  last_daily_claim: Date | null;
+  daily_streak: number;
   created_at: Date;
   updated_at: Date;
 }
@@ -40,6 +42,8 @@ export function dbRowToGameState(row: DbUser): GameState {
     referrals: row.referrals ?? [],
     lastEnergyUpdate: new Date(row.last_energy_update).getTime(),
     lastOfflineEarnings: new Date(row.last_offline_earnings).getTime(),
+    lastDailyClaim: row.last_daily_claim ? new Date(row.last_daily_claim).getTime() : null,
+    dailyStreak: row.daily_streak || 0,
   };
 }
 

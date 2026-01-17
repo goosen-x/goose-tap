@@ -17,6 +17,11 @@ import {
   getNextLevelData,
   XP_REWARDS,
   Level,
+  DailyReward,
+  DAILY_REWARDS,
+  canClaimDaily,
+  getDailyReward,
+  getTimeUntilNextDaily,
 } from '@/types/game';
 import {
   loadGameState,
@@ -52,6 +57,14 @@ export interface UseGameStateResult {
   xpToNextLevel: number;
   levelProgress: number; // 0-100%
 
+  // Daily rewards
+  dailyStreak: number;
+  lastDailyClaim: number | null;
+  canClaimDailyReward: boolean;
+  currentDailyReward: DailyReward;
+  timeUntilNextDaily: number;
+  allDailyRewards: DailyReward[];
+
   // Status
   isLoaded: boolean;
   isLoading: boolean;
@@ -63,6 +76,7 @@ export interface UseGameStateResult {
   purchaseUpgrade: (upgradeId: string) => boolean;
   completeTask: (taskId: string) => boolean;
   addReferral: (referral: Omit<Referral, 'id'>) => void;
+  claimDailyReward: () => Promise<DailyReward | null>;
   save: () => void;
 
   // Helpers
@@ -471,6 +485,37 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     [state.referrals.length, state.level]
   );
 
+  // Claim daily reward
+  const claimDailyReward = useCallback(async (): Promise<DailyReward | null> => {
+    if (!initDataRef.current) return null;
+    if (!canClaimDaily(stateRef.current.lastDailyClaim)) return null;
+
+    try {
+      const response = await fetch('/api/game/daily', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: initDataRef.current }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('Daily claim error:', error);
+        return null;
+      }
+
+      const data = await response.json();
+
+      // Update local state with server response
+      setState(data.state);
+      saveGameState(data.state);
+
+      return data.reward as DailyReward;
+    } catch (error) {
+      console.error('Failed to claim daily reward:', error);
+      return null;
+    }
+  }, []);
+
   // Manual save
   const save = useCallback(() => {
     saveGameState(stateRef.current);
@@ -487,6 +532,11 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     ? ((state.xp - levelData.xpRequired) / (nextLevelData.xpRequired - levelData.xpRequired)) * 100
     : 100;
 
+  // Calculate daily reward info
+  const canClaimDailyRewardNow = canClaimDaily(state.lastDailyClaim);
+  const currentDailyReward = getDailyReward(state.dailyStreak);
+  const timeUntilNextDaily = getTimeUntilNextDaily(state.lastDailyClaim);
+
   return {
     // State
     ...state,
@@ -501,11 +551,18 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     xpToNextLevel,
     levelProgress: Math.min(Math.max(levelProgress, 0), 100),
 
+    // Daily rewards
+    canClaimDailyReward: canClaimDailyRewardNow,
+    currentDailyReward,
+    timeUntilNextDaily,
+    allDailyRewards: DAILY_REWARDS,
+
     // Actions
     tap,
     purchaseUpgrade,
     completeTask,
     addReferral,
+    claimDailyReward,
     save,
 
     // Helpers

@@ -92,6 +92,24 @@ export const XP_REWARDS = {
   referral: 1000,
 };
 
+// Daily rewards
+export interface DailyReward {
+  day: number;
+  coins: number;
+  xp: number;
+  bonus?: string; // special bonus like 'mystery_box'
+}
+
+export const DAILY_REWARDS: DailyReward[] = [
+  { day: 1, coins: 500, xp: 50 },
+  { day: 2, coins: 1000, xp: 100 },
+  { day: 3, coins: 2000, xp: 200 },
+  { day: 4, coins: 3500, xp: 350 },
+  { day: 5, coins: 5000, xp: 500 },
+  { day: 6, coins: 7500, xp: 750 },
+  { day: 7, coins: 15000, xp: 1500, bonus: 'week_complete' },
+];
+
 // Game state
 export interface GameState {
   coins: number;
@@ -107,6 +125,8 @@ export interface GameState {
   referrals: Referral[];
   lastEnergyUpdate: number;
   lastOfflineEarnings: number;
+  lastDailyClaim: number | null;
+  dailyStreak: number;
 }
 
 // Default game state
@@ -124,6 +144,8 @@ export const DEFAULT_GAME_STATE: GameState = {
   referrals: [],
   lastEnergyUpdate: Date.now(),
   lastOfflineEarnings: Date.now(),
+  lastDailyClaim: null,
+  dailyStreak: 0,
 };
 
 // Upgrade definitions
@@ -325,4 +347,51 @@ export function calculateLevelBonuses(level: number): {
 // Legacy function for backwards compatibility
 export function calculateLevel(coins: number): number {
   return Math.floor(coins / 10000) + 1;
+}
+
+// Daily reward helpers
+export function canClaimDaily(lastClaim: number | null): boolean {
+  if (!lastClaim) return true;
+
+  const now = Date.now();
+  const lastClaimDate = new Date(lastClaim);
+  const today = new Date(now);
+
+  // Reset to start of day (UTC)
+  lastClaimDate.setUTCHours(0, 0, 0, 0);
+  today.setUTCHours(0, 0, 0, 0);
+
+  // Can claim if it's a new day
+  return today.getTime() > lastClaimDate.getTime();
+}
+
+export function getDailyReward(streak: number): DailyReward {
+  // Streak is 0-indexed, rewards are 1-indexed (day 1-7)
+  // After 7 days, cycle back
+  const dayIndex = streak % 7;
+  return DAILY_REWARDS[dayIndex];
+}
+
+export function shouldResetStreak(lastClaim: number | null): boolean {
+  if (!lastClaim) return false;
+
+  const now = Date.now();
+  const hoursSinceLastClaim = (now - lastClaim) / (1000 * 60 * 60);
+
+  // Reset streak if more than 48 hours since last claim
+  return hoursSinceLastClaim > 48;
+}
+
+export function getTimeUntilNextDaily(lastClaim: number | null): number {
+  if (!lastClaim) return 0;
+
+  const lastClaimDate = new Date(lastClaim);
+  const nextClaimDate = new Date(lastClaimDate);
+
+  // Next claim is available at start of next day (UTC)
+  nextClaimDate.setUTCDate(nextClaimDate.getUTCDate() + 1);
+  nextClaimDate.setUTCHours(0, 0, 0, 0);
+
+  const now = Date.now();
+  return Math.max(0, nextClaimDate.getTime() - now);
 }

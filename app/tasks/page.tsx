@@ -2,6 +2,7 @@
 
 import { useGame } from '@/components/GameProvider';
 import { TaskCard } from '@/components/TaskCard';
+import { DailyRewardCard } from '@/components/DailyReward';
 import { TASKS } from '@/types/game';
 import { useTelegram } from '@/hooks/useTelegram';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -55,6 +56,11 @@ export default function TasksPage() {
           {(['all', 'daily', 'social'] as FilterType[]).map((filter) => (
             <TabsContent key={filter} value={filter} className="mt-0">
               <div className="flex flex-col gap-3">
+                {/* Daily Reward Card - show on all and daily tabs */}
+                {(filter === 'all' || filter === 'daily') && (
+                  <DailyRewardCard />
+                )}
+
                 {getFilteredTasks(filter).map((task) => (
                   <TaskCard
                     key={task.id}
