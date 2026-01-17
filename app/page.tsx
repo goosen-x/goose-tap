@@ -28,14 +28,12 @@ export default function Home() {
     setIsMounted(true);
   }, []);
 
-  const lastTapTime = useRef(0);
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      // Capture pointer for reliable pointerup events
+      e.currentTarget.setPointerCapture(e.pointerId);
 
-  const handleTap = useCallback(
-    (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
-      // Prevent double-tap from touch + click events
-      const now = Date.now();
-      if (now - lastTapTime.current < 100) return;
-      lastTapTime.current = now;
+      setIsPressed(true);
 
       if (energy <= 0) return;
 
@@ -45,19 +43,10 @@ export default function Home() {
       // Perform tap action
       tap();
 
+      // Coordinates for effect
       const rect = e.currentTarget.getBoundingClientRect();
-      let clientX: number, clientY: number;
-
-      if ('touches' in e) {
-        clientX = e.touches[0].clientX;
-        clientY = e.touches[0].clientY;
-      } else {
-        clientX = e.clientX;
-        clientY = e.clientY;
-      }
-
-      const x = clientX - rect.left;
-      const y = clientY - rect.top;
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
 
       const newEffect: TapEffect = {
         id: tapIdRef.current++,
@@ -74,6 +63,10 @@ export default function Home() {
     },
     [energy, coinsPerTap, webApp, tap]
   );
+
+  const handlePointerUp = useCallback(() => {
+    setIsPressed(false);
+  }, []);
 
   const energyPercentage = (energy / maxEnergy) * 100;
 
@@ -124,15 +117,11 @@ export default function Home() {
           className={`relative flex h-56 w-56 cursor-pointer select-none items-center justify-center rounded-full border-4 border-border bg-secondary shadow-lg transition-transform duration-75 ${
             isPressed ? 'scale-95' : 'scale-100'
           }`}
-          onMouseDown={() => setIsPressed(true)}
-          onMouseUp={() => setIsPressed(false)}
-          onMouseLeave={() => setIsPressed(false)}
-          onTouchEnd={() => setIsPressed(false)}
-          onClick={handleTap}
-          onTouchStart={(e) => {
-            setIsPressed(true);
-            handleTap(e);
-          }}
+          style={{ touchAction: 'manipulation' }}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerUp}
+          onPointerCancel={handlePointerUp}
         >
           <Coins
             className={`h-24 w-24 transition-transform duration-75 ${
