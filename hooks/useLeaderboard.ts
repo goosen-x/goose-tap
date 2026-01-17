@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { LeaderboardEntry, LeaderboardResponse } from '@/types/game';
+import { getLeaderboard } from '@/app/actions/leaderboard';
 
 const PAGE_SIZE = 20;
 
@@ -50,18 +51,8 @@ export function useLeaderboard(initData: string | null): UseLeaderboardResult {
     setError(null);
 
     try {
-      const params = new URLSearchParams();
-      params.set('initData', currentInitData);
-      params.set('limit', String(PAGE_SIZE));
-      params.set('offset', String(offset));
-
-      const response = await fetch(`/api/leaderboard?${params.toString()}`);
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch leaderboard');
-      }
-
-      const result: LeaderboardResponse = await response.json();
+      // Use Server Action with caching instead of API route
+      const result = await getLeaderboard(currentInitData, PAGE_SIZE, offset);
 
       if (isRefresh) {
         setEntries(result.leaderboard);
