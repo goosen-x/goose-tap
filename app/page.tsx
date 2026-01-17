@@ -5,6 +5,9 @@ import { useTelegram } from '@/hooks/useTelegram';
 import { useGame } from '@/components/GameProvider';
 import { formatNumber } from '@/lib/storage';
 import { Progress } from '@/components/ui/progress';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Coins, Zap, User } from 'lucide-react';
 
 interface TapEffect {
   id: number;
@@ -25,8 +28,15 @@ export default function Home() {
     setIsMounted(true);
   }, []);
 
+  const lastTapTime = useRef(0);
+
   const handleTap = useCallback(
     (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+      // Prevent double-tap from touch + click events
+      const now = Date.now();
+      if (now - lastTapTime.current < 100) return;
+      lastTapTime.current = now;
+
       if (energy <= 0) return;
 
       // Haptic feedback
@@ -67,43 +77,41 @@ export default function Home() {
 
   const energyPercentage = (energy / maxEnergy) * 100;
 
-  // Show loading state while game state is being loaded
-  // Use isMounted to avoid hydration mismatch
   if (!isMounted || !isLoaded) {
     return (
-      <div className="flex flex-1 items-center justify-center bg-gradient-to-b from-amber-50 to-orange-100 dark:from-zinc-900 dark:to-zinc-800">
+      <div className="flex flex-1 items-center justify-center bg-background">
         <div className="text-center">
-          <div className="mb-4 text-6xl">🪿</div>
-          <p className="text-zinc-600 dark:text-zinc-400">Loading...</p>
+          <div className="mb-4 flex h-16 w-16 mx-auto items-center justify-center rounded-full bg-secondary">
+            <Coins className="h-8 w-8" />
+          </div>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-gradient-to-b from-amber-50 to-orange-100 dark:from-zinc-900 dark:to-zinc-800">
+    <div className="flex flex-1 flex-col bg-background">
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500 text-xl">
-            🪿
+      <header className="flex items-center justify-between border-b p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
+            <User className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+            <p className="font-medium">
               {user?.first_name || 'Player'}
             </p>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">Level {level}</p>
+            <p className="text-sm text-muted-foreground">Level {level}</p>
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
-          <div className="flex items-center gap-1 rounded-full bg-amber-500/20 px-3 py-1.5">
-            <span className="text-lg">🪙</span>
-            <span className="font-bold text-amber-700 dark:text-amber-400">
-              {formatNumber(coins)}
-            </span>
-          </div>
+          <Badge variant="secondary" className="text-base px-3 py-1">
+            <Coins className="h-4 w-4 mr-1" />
+            {formatNumber(coins)}
+          </Badge>
           {coinsPerHour > 0 && (
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            <p className="text-xs text-muted-foreground">
               +{formatNumber(coinsPerHour)}/hr
             </p>
           )}
@@ -111,9 +119,9 @@ export default function Home() {
       </header>
 
       {/* Main tap area */}
-      <main className="flex flex-1 flex-col items-center justify-center px-4">
+      <main className="flex flex-1 flex-col items-center justify-center p-4">
         <div
-          className={`relative flex h-64 w-64 cursor-pointer select-none items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 shadow-2xl transition-transform duration-75 active:scale-95 ${
+          className={`relative flex h-56 w-56 cursor-pointer select-none items-center justify-center rounded-full border-4 border-border bg-secondary shadow-lg transition-transform duration-75 ${
             isPressed ? 'scale-95' : 'scale-100'
           }`}
           onMouseDown={() => setIsPressed(true)}
@@ -126,20 +134,17 @@ export default function Home() {
             handleTap(e);
           }}
         >
-          {/* Goose emoji */}
-          <span
-            className={`text-[8rem] transition-transform duration-75 ${
+          <Coins
+            className={`h-24 w-24 transition-transform duration-75 ${
               isPressed ? 'scale-90' : 'scale-100'
             }`}
-          >
-            🪿
-          </span>
+          />
 
           {/* Tap effects */}
           {tapEffects.map((effect) => (
             <div
               key={effect.id}
-              className="pointer-events-none absolute animate-float-up text-2xl font-bold text-amber-600 dark:text-amber-400"
+              className="pointer-events-none absolute animate-float-up text-xl font-bold text-foreground"
               style={{
                 left: effect.x,
                 top: effect.y,
@@ -150,24 +155,22 @@ export default function Home() {
           ))}
         </div>
 
-        <p className="mt-6 text-center text-zinc-600 dark:text-zinc-400">
-          Tap the goose to earn coins!
+        <p className="mt-6 text-center text-muted-foreground">
+          Tap to earn coins!
         </p>
       </main>
 
       {/* Energy bar */}
-      <div className="px-4 pb-4">
-        <div className="flex items-center justify-between text-sm text-zinc-600 dark:text-zinc-400">
+      <Card className="mx-4 mb-4 p-4">
+        <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
           <div className="flex items-center gap-1">
-            <span>⚡</span>
-            <span>
-              {energy}/{maxEnergy}
-            </span>
+            <Zap className="h-4 w-4" />
+            <span>{energy}/{maxEnergy}</span>
           </div>
           <span>+{coinsPerTap}/tap</span>
         </div>
-        <Progress value={energyPercentage} className="mt-1 h-3" />
-      </div>
+        <Progress value={energyPercentage} className="h-2" />
+      </Card>
     </div>
   );
 }

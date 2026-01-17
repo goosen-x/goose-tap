@@ -6,6 +6,8 @@ import { TASKS } from '@/types/game';
 import { formatNumber } from '@/lib/storage';
 import { useTelegram } from '@/hooks/useTelegram';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Coins, ListTodo, Calendar, Share2 } from 'lucide-react';
 
 type FilterType = 'all' | 'daily' | 'social';
 
@@ -32,32 +34,37 @@ export default function TasksPage() {
   };
 
   return (
-    <div className="flex flex-1 flex-col bg-gradient-to-b from-amber-50 to-orange-100 dark:from-zinc-900 dark:to-zinc-800">
+    <div className="flex flex-1 flex-col bg-background">
       {/* Header */}
-      <header className="px-4 py-4">
+      <header className="border-b p-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">
-            Tasks
-          </h1>
-          <div className="flex items-center gap-1 rounded-full bg-primary/20 px-3 py-1.5">
-            <span className="text-lg">🪙</span>
-            <span className="font-bold text-primary">
-              {formatNumber(coins)}
-            </span>
-          </div>
+          <h1 className="text-xl font-semibold">Tasks</h1>
+          <Badge variant="secondary" className="text-base px-3 py-1">
+            <Coins className="h-4 w-4 mr-1" />
+            {formatNumber(coins)}
+          </Badge>
         </div>
       </header>
 
       {/* Tabs and content */}
-      <Tabs defaultValue="all" className="flex flex-1 flex-col px-4">
+      <Tabs defaultValue="all" className="flex flex-1 flex-col p-4">
         <TabsList className="w-full">
-          <TabsTrigger value="all" className="flex-1 cursor-pointer">All</TabsTrigger>
-          <TabsTrigger value="daily" className="flex-1 cursor-pointer">Daily</TabsTrigger>
-          <TabsTrigger value="social" className="flex-1 cursor-pointer">Social</TabsTrigger>
+          <TabsTrigger value="all" className="flex-1 cursor-pointer">
+            <ListTodo className="h-4 w-4 mr-1" />
+            All
+          </TabsTrigger>
+          <TabsTrigger value="daily" className="flex-1 cursor-pointer">
+            <Calendar className="h-4 w-4 mr-1" />
+            Daily
+          </TabsTrigger>
+          <TabsTrigger value="social" className="flex-1 cursor-pointer">
+            <Share2 className="h-4 w-4 mr-1" />
+            Social
+          </TabsTrigger>
         </TabsList>
 
         {/* Task list */}
-        <div className="flex-1 pb-4 pt-4">
+        <div className="flex-1 pt-4">
           {(['all', 'daily', 'social'] as FilterType[]).map((filter) => (
             <TabsContent key={filter} value={filter} className="mt-0">
               <div className="flex flex-col gap-3">

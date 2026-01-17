@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useTelegram } from '@/hooks/useTelegram';
+import { Check, Megaphone, MessageSquare, Calendar, Users, Star, Target, Lock, ExternalLink } from 'lucide-react';
 
 interface TaskCardProps {
   task: Task;
@@ -17,6 +18,15 @@ interface TaskCardProps {
   onComplete: () => void;
   onAction?: () => void;
 }
+
+const iconMap: Record<string, React.ReactNode> = {
+  'subscribe-gooselabs': <Megaphone className="h-5 w-5" />,
+  'join-group': <MessageSquare className="h-5 w-5" />,
+  'daily-login': <Calendar className="h-5 w-5" />,
+  'invite-3-friends': <Users className="h-5 w-5" />,
+  'reach-level-5': <Star className="h-5 w-5" />,
+  'tap-1000': <Target className="h-5 w-5" />,
+};
 
 export function TaskCard({ task, isCompleted, progress, onComplete, onAction }: TaskCardProps) {
   const { checkSubscription, isChecking } = useSubscription();
@@ -56,8 +66,8 @@ export function TaskCard({ task, isCompleted, progress, onComplete, onAction }: 
 
   return (
     <Card className="flex flex-row items-center gap-3 p-4">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-2xl">
-        {task.icon}
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
+        {iconMap[task.id] || <Target className="h-5 w-5" />}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
@@ -65,7 +75,7 @@ export function TaskCard({ task, isCompleted, progress, onComplete, onAction }: 
             {task.title}
           </h3>
           {isCompleted && (
-            <span className="text-green-500 text-lg">✓</span>
+            <Check className="h-4 w-4 text-green-500" />
           )}
         </div>
         <p className="text-sm text-muted-foreground truncate">
@@ -98,15 +108,18 @@ export function TaskCard({ task, isCompleted, progress, onComplete, onAction }: 
             size="sm"
             onClick={handleClaim}
             disabled={isChecking}
+            className="cursor-pointer"
           >
             {isChecking ? '...' : 'Claim'}
           </Button>
         ) : task.action ? (
-          <Button size="sm" variant="secondary" onClick={handleAction}>
+          <Button size="sm" variant="secondary" onClick={handleAction} className="cursor-pointer">
+            <ExternalLink className="h-3 w-3 mr-1" />
             Go
           </Button>
         ) : (
           <Badge variant="outline">
+            <Lock className="h-3 w-3 mr-1" />
             Locked
           </Badge>
         )}

@@ -5,6 +5,7 @@ import { formatNumber } from '@/lib/storage';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Coins, Clock, TrendingUp, Sparkles, Rocket, Battery } from 'lucide-react';
 
 interface UpgradeCardProps {
   upgrade: Upgrade;
@@ -12,6 +13,15 @@ interface UpgradeCardProps {
   coins: number;
   onPurchase: () => void;
 }
+
+const iconMap: Record<string, React.ReactNode> = {
+  'golden-goose': <Coins className="h-6 w-6" />,
+  'egg-farm': <Clock className="h-6 w-6" />,
+  'golden-egg': <Sparkles className="h-6 w-6" />,
+  'goose-nest': <TrendingUp className="h-6 w-6" />,
+  'energy-drink': <Battery className="h-6 w-6" />,
+  'turbo-tap': <Rocket className="h-6 w-6" />,
+};
 
 export function UpgradeCard({ upgrade, level, coins, onPurchase }: UpgradeCardProps) {
   const cost = calculateUpgradeCost(upgrade, level);
@@ -32,22 +42,22 @@ export function UpgradeCard({ upgrade, level, coins, onPurchase }: UpgradeCardPr
 
   return (
     <Card className="flex flex-row items-center gap-3 p-4">
-      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 text-3xl">
-        {upgrade.icon}
+      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-secondary">
+        {iconMap[upgrade.id] || <Coins className="h-6 w-6" />}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <h3 className="font-semibold">
+          <h3 className="font-medium">
             {upgrade.name}
           </h3>
-          <Badge variant="secondary">
+          <Badge variant="outline">
             Lvl {level}
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">
           {upgrade.description}
         </p>
-        <p className="mt-0.5 text-sm font-medium text-primary">
+        <p className="mt-0.5 text-sm font-medium">
           {getBonusText()}
         </p>
       </div>
@@ -61,8 +71,10 @@ export function UpgradeCard({ upgrade, level, coins, onPurchase }: UpgradeCardPr
             size="sm"
             onClick={onPurchase}
             disabled={!canAfford}
+            className="cursor-pointer"
           >
-            🪙 {formatNumber(cost)}
+            <Coins className="h-3 w-3 mr-1" />
+            {formatNumber(cost)}
           </Button>
         )}
       </div>
