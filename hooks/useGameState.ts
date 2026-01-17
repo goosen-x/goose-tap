@@ -168,17 +168,30 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
   }, [isLoaded]);
 
   // Passive income timer (coins per hour)
+  // Accumulate fractional coins to handle small hourly rates
+  const accumulatedCoins = useRef(0);
+
   useEffect(() => {
     if (!isLoaded || state.coinsPerHour === 0) return;
 
     const interval = setInterval(() => {
       setState((prev) => {
-        const newState = {
-          ...prev,
-          coins: prev.coins + Math.floor(prev.coinsPerHour / 3600), // Per second
-        };
-        saveGameState(newState); // Cache locally
-        return newState;
+        // Add fractional coins per second
+        accumulatedCoins.current += prev.coinsPerHour / 3600;
+
+        // Only add whole coins to the state
+        const wholeCoins = Math.floor(accumulatedCoins.current);
+        if (wholeCoins > 0) {
+          accumulatedCoins.current -= wholeCoins;
+          const newState = {
+            ...prev,
+            coins: prev.coins + wholeCoins,
+          };
+          saveGameState(newState); // Cache locally
+          return newState;
+        }
+
+        return prev;
       });
     }, 1000);
 
