@@ -42,7 +42,9 @@ export function Header() {
           <p className="text-sm font-medium leading-tight">
             {user?.first_name || 'Player'}
           </p>
-          <p className="text-xs text-muted-foreground">Lvl {level}</p>
+          <p className="text-xs text-muted-foreground">
+            Lvl {level} {user?.id && <span className="opacity-50">#{user.id}</span>}
+          </p>
         </div>
       </div>
       <div className="flex flex-col items-end">
