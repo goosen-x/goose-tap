@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { SlidingNumber } from '@/components/ui/sliding-number';
 import { Coins, Gift, Check, Clock, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -83,10 +84,10 @@ export function DailyRewardDialog({ open, onOpenChange }: DailyRewardProps) {
             <div className="flex items-center justify-center gap-4 text-lg">
               <span className="flex items-center gap-1">
                 <Coins className="h-5 w-5" />
-                +{formatNumber(claimedReward.coins)}
+                +<SlidingNumber value={claimedReward.coins} />
               </span>
-              <span className="text-muted-foreground">
-                +{claimedReward.xp} XP
+              <span className="text-muted-foreground flex items-center gap-1">
+                +<SlidingNumber value={claimedReward.xp} /> XP
               </span>
             </div>
             {claimedReward.bonus && (
@@ -123,11 +124,11 @@ export function DailyRewardDialog({ open, onOpenChange }: DailyRewardProps) {
             </div>
 
             <div className="flex items-center justify-between pt-2">
-              <div className="text-sm text-muted-foreground">
-                🔥 Streak: {dailyStreak} day{dailyStreak !== 1 ? 's' : ''}
+              <div className="text-sm text-muted-foreground flex items-center gap-1">
+                🔥 Streak: <SlidingNumber value={dailyStreak} /> day{dailyStreak !== 1 ? 's' : ''}
               </div>
-              <div className="text-sm text-muted-foreground">
-                Day {currentDay}/7
+              <div className="text-sm text-muted-foreground flex items-center gap-1">
+                Day <SlidingNumber value={currentDay} />/7
               </div>
             </div>
 
@@ -140,10 +141,10 @@ export function DailyRewardDialog({ open, onOpenChange }: DailyRewardProps) {
               {isClaiming ? (
                 'Claiming...'
               ) : canClaimDailyReward ? (
-                <>
+                <span className="flex items-center">
                   <Gift className="h-4 w-4 mr-2" />
-                  Claim +{formatNumber(currentDailyReward.coins)}
-                </>
+                  Claim +<SlidingNumber value={currentDailyReward.coins} />
+                </span>
               ) : (
                 <>
                   <Clock className="h-4 w-4 mr-2" />
@@ -263,11 +264,11 @@ export function DailyRewardCard() {
           </p>
         </div>
         <div className="flex flex-col items-end gap-1">
-          <Badge variant="secondary">
-            +{formatNumber(currentDailyReward.coins)}
+          <Badge variant="secondary" className="flex items-center">
+            +<SlidingNumber value={currentDailyReward.coins} />
           </Badge>
-          <span className="text-xs text-muted-foreground">
-            🔥 {dailyStreak} day streak
+          <span className="text-xs text-muted-foreground flex items-center gap-1">
+            🔥 <SlidingNumber value={dailyStreak} /> day streak
           </span>
         </div>
       </Card>

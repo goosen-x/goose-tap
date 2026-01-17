@@ -4,6 +4,7 @@ import { useTelegram } from '@/hooks/useTelegram';
 import { useGame } from '@/components/GameProvider';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { SlidingNumber } from '@/components/ui/sliding-number';
 
 function GooseIcon({ className }: { className?: string }) {
   return (
@@ -63,20 +64,20 @@ export function Header() {
           <p className="text-sm font-medium leading-tight">
             {user?.first_name || 'Player'}
           </p>
-          <p className="text-xs text-muted-foreground">
-            Lvl {level}
-          </p>
+          <span className="text-xs text-muted-foreground flex items-center gap-0.5">
+            Lvl <SlidingNumber value={level} />
+          </span>
         </div>
       </div>
       <div className="flex flex-col items-end">
-        <Badge variant="secondary" className="px-2 py-0.5">
-          {coins.toLocaleString('ru-RU')}
+        <Badge variant="secondary" className="px-2 py-0.5 flex items-center">
+          <SlidingNumber value={coins} />
           <GooseIcon className="h-3 w-3 ml-1" />
         </Badge>
         {coinsPerHour > 0 && (
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            +{coinsPerHour.toLocaleString('ru-RU')}/hr
-          </p>
+          <span className="text-[10px] text-muted-foreground mt-0.5 flex items-center">
+            +<SlidingNumber value={coinsPerHour} />/hr
+          </span>
         )}
       </div>
     </header>

@@ -5,6 +5,7 @@ import { formatNumber } from '@/lib/storage';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { SlidingNumber } from '@/components/ui/sliding-number';
 import { Coins, Clock, TrendingUp, Sparkles, Rocket, Battery } from 'lucide-react';
 
 interface UpgradeCardProps {
@@ -50,8 +51,8 @@ export function UpgradeCard({ upgrade, level, coins, onPurchase }: UpgradeCardPr
           <h3 className="font-medium">
             {upgrade.name}
           </h3>
-          <Badge variant="outline">
-            Lvl {level}
+          <Badge variant="outline" className="flex items-center gap-0.5">
+            Lvl <SlidingNumber value={level} />
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">
@@ -74,7 +75,7 @@ export function UpgradeCard({ upgrade, level, coins, onPurchase }: UpgradeCardPr
             className="cursor-pointer"
           >
             <Coins className="h-3 w-3 mr-1" />
-            {formatNumber(cost)}
+            <SlidingNumber value={cost} />
           </Button>
         )}
       </div>

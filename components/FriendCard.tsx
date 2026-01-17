@@ -4,6 +4,7 @@ import { Referral } from '@/types/game';
 import { formatNumber } from '@/lib/storage';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { SlidingNumber } from '@/components/ui/sliding-number';
 import { User, Coins } from 'lucide-react';
 
 interface FriendCardProps {
@@ -27,9 +28,9 @@ export function FriendCard({ friend }: FriendCardProps) {
           Joined {new Date(friend.joinedAt).toLocaleDateString()}
         </p>
       </div>
-      <Badge variant="secondary">
+      <Badge variant="secondary" className="flex items-center">
         <Coins className="h-3 w-3 mr-1" />
-        {formatNumber(friend.coins)}
+        <SlidingNumber value={friend.coins} />
       </Badge>
     </Card>
   );

@@ -5,6 +5,7 @@ import { useTelegram } from '@/hooks/useTelegram';
 import { useGame } from '@/components/GameProvider';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
+import { SlidingNumber } from '@/components/ui/sliding-number';
 import { Zap } from 'lucide-react';
 
 function GooseLogo({ className }: { className?: string }) {
@@ -178,9 +179,9 @@ export default function Home() {
           <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
             <div className="flex items-center gap-1">
               <Zap className="h-4 w-4" />
-              <span>{energy}/{maxEnergy}</span>
+              <span className="flex items-center"><SlidingNumber value={energy} />/<SlidingNumber value={maxEnergy} /></span>
             </div>
-            <span>+{coinsPerTap}/tap</span>
+            <span className="flex items-center">+<SlidingNumber value={coinsPerTap} />/tap</span>
           </div>
           <Progress value={energyPercentage} className="h-2" />
         </Card>

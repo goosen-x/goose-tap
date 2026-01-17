@@ -7,6 +7,7 @@ import { useTelegram } from '@/hooks/useTelegram';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { SlidingNumber } from '@/components/ui/sliding-number';
 import { Layers, Rocket, Star, Zap, Clock, Battery } from 'lucide-react';
 
 type TabType = 'cards' | 'boosts';
@@ -61,11 +62,11 @@ export default function EarnPage() {
             </div>
           </div>
           <div className="text-right">
-            <p className="text-sm font-medium">{xp.toLocaleString('ru-RU')} XP</p>
+            <span className="text-sm font-medium flex items-center justify-end gap-1"><SlidingNumber value={xp} /> XP</span>
             {nextLevelData && (
-              <p className="text-xs text-muted-foreground">
-                {nextLevelData.xpRequired.toLocaleString('ru-RU')} next
-              </p>
+              <span className="text-xs text-muted-foreground flex items-center justify-end gap-1">
+                <SlidingNumber value={nextLevelData.xpRequired} /> next
+              </span>
             )}
           </div>
         </div>
@@ -82,17 +83,17 @@ export default function EarnPage() {
         <Card className="p-2 text-center">
           <Zap className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
           <p className="text-[10px] text-muted-foreground">Per tap</p>
-          <p className="text-sm font-semibold">+{coinsPerTap}</p>
+          <span className="text-sm font-semibold flex items-center justify-center">+<SlidingNumber value={coinsPerTap} /></span>
         </Card>
         <Card className="p-2 text-center">
           <Clock className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
           <p className="text-[10px] text-muted-foreground">Per hour</p>
-          <p className="text-sm font-semibold">+{coinsPerHour.toLocaleString('ru-RU')}</p>
+          <span className="text-sm font-semibold flex items-center justify-center">+<SlidingNumber value={coinsPerHour} /></span>
         </Card>
         <Card className="p-2 text-center">
           <Battery className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
           <p className="text-[10px] text-muted-foreground">Max energy</p>
-          <p className="text-sm font-semibold">{maxEnergy.toLocaleString('ru-RU')}</p>
+          <span className="text-sm font-semibold flex items-center justify-center"><SlidingNumber value={maxEnergy} /></span>
         </Card>
       </div>
 

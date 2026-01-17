@@ -7,6 +7,7 @@ import { LeaderboardCard } from '@/components/LeaderboardCard';
 import { formatNumber } from '@/lib/storage';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { SlidingNumber } from '@/components/ui/sliding-number';
 import { Trophy, RefreshCw, Users, Loader2 } from 'lucide-react';
 
 function LeaderboardSkeleton() {
@@ -86,11 +87,11 @@ export default function LeaderboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Your Rank</p>
-                <p className="text-2xl font-bold">#{currentUser.rank}</p>
+                <span className="text-2xl font-bold flex items-center">#<SlidingNumber value={currentUser.rank} /></span>
               </div>
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Your Coins</p>
-                <p className="text-lg font-semibold">{formatNumber(currentUser.coins)}</p>
+                <span className="text-lg font-semibold flex items-center justify-end"><SlidingNumber value={currentUser.coins} /></span>
               </div>
             </div>
           </Card>
@@ -100,7 +101,7 @@ export default function LeaderboardPage() {
         {totalPlayers > 0 && (
           <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
             <Users className="h-4 w-4" />
-            <span>{formatNumber(totalPlayers)} players</span>
+            <span className="flex items-center gap-1"><SlidingNumber value={totalPlayers} /> players</span>
           </div>
         )}
       </div>

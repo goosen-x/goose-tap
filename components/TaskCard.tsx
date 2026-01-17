@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { SlidingNumber } from '@/components/ui/sliding-number';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useTelegram } from '@/hooks/useTelegram';
 import { Check, Megaphone, MessageSquare, Calendar, Users, Star, Target, Lock, ExternalLink } from 'lucide-react';
@@ -84,9 +85,9 @@ export function TaskCard({ task, isCompleted, progress, onComplete, onAction }: 
         {hasProgress && !isCompleted && (
           <div className="mt-2">
             <Progress value={progressPercentage} className="h-2" />
-            <p className="mt-1 text-xs text-muted-foreground">
-              {progress}/{task.requirement}
-            </p>
+            <span className="mt-1 text-xs text-muted-foreground flex items-center gap-0.5">
+              <SlidingNumber value={progress || 0} />/<SlidingNumber value={task.requirement || 0} />
+            </span>
           </div>
         )}
         {error && (
@@ -96,8 +97,8 @@ export function TaskCard({ task, isCompleted, progress, onComplete, onAction }: 
         )}
       </div>
       <div className="flex flex-col items-end gap-2">
-        <Badge variant="secondary">
-          +{formatNumber(task.reward)}
+        <Badge variant="secondary" className="flex items-center">
+          +<SlidingNumber value={task.reward} />
         </Badge>
         {isCompleted ? (
           <Badge variant="outline" className="text-green-600">

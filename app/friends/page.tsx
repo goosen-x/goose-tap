@@ -6,6 +6,7 @@ import { formatNumber } from '@/lib/storage';
 import { useTelegram } from '@/hooks/useTelegram';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { SlidingNumber } from '@/components/ui/sliding-number';
 import { Users, Gift, Gem, Copy, UserPlus } from 'lucide-react';
 
 const REFERRAL_BONUS = 10000;
@@ -71,12 +72,12 @@ export default function FriendsPage() {
       {/* Friends list */}
       <main className="flex-1 p-4 pt-2">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-medium text-muted-foreground">
-            Your friends ({referrals.length})
+          <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+            Your friends (<SlidingNumber value={referrals.length} />)
           </h3>
           {totalEarned > 0 && (
-            <span className="text-sm">
-              Total earned: {formatNumber(totalEarned)}
+            <span className="text-sm flex items-center gap-1">
+              Total earned: <SlidingNumber value={totalEarned} />
             </span>
           )}
         </div>
