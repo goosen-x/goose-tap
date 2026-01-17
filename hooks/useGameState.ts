@@ -27,7 +27,13 @@ import {
   loadGameState,
   saveGameState,
 } from '@/lib/storage';
-import { gameAPI } from './useGameAPI';
+import {
+  loadGame,
+  saveGame,
+  tap as tapAction,
+  purchaseUpgrade as purchaseUpgradeAction,
+  completeTask as completeTaskAction,
+} from '@/app/actions/game';
 import { useSyncOnFocus } from './useSyncOnFocus';
 
 export interface UseGameStateOptions {
@@ -126,12 +132,16 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
 
     loadedRef.current = true;
 
-    gameAPI.loadGame(initData)
+    loadGame(initData)
       .then((response) => {
-        setState(response.state);
-        saveGameState(response.state);
-        setOfflineEarnings(response.offlineEarnings);
-        setOfflineMinutes(response.offlineMinutes);
+        if (response.success && response.state) {
+          setState(response.state);
+          saveGameState(response.state);
+          setOfflineEarnings(response.offlineEarnings ?? 0);
+          setOfflineMinutes(response.offlineMinutes ?? 0);
+        } else {
+          setError(response.error ?? 'Load failed');
+        }
         setIsLoading(false);
         setIsLoaded(true);
       })
@@ -219,7 +229,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     if (!isLoaded || !initData) return;
 
     const interval = setInterval(() => {
-      gameAPI.saveGame(initDataRef.current, stateRef.current).catch(console.error);
+      saveGame(initDataRef.current, stateRef.current).catch(console.error);
     }, 10000);
 
     return () => clearInterval(interval);
@@ -302,7 +312,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     if (tapBatchRef.current >= TAP_BATCH_SIZE && initDataRef.current) {
       const count = tapBatchRef.current;
       tapBatchRef.current = 0;
-      gameAPI.tap(initDataRef.current, count).catch(console.error);
+      tapAction(initDataRef.current, count).catch(console.error);
     }
   }, [recalculateStats]);
 
@@ -312,7 +322,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
       if (tapBatchRef.current > 0 && initDataRef.current) {
         const count = tapBatchRef.current;
         tapBatchRef.current = 0;
-        gameAPI.tap(initDataRef.current, count).catch(console.error);
+        tapAction(initDataRef.current, count).catch(console.error);
       }
     };
 
@@ -379,18 +389,22 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     setState(optimisticState);
     saveGameState(optimisticState);
 
-    // Call API and handle response
+    // Call Server Action and handle response
     if (initDataRef.current) {
-      gameAPI.purchaseUpgrade(initDataRef.current, upgradeId)
+      purchaseUpgradeAction(initDataRef.current, upgradeId)
         .then((response) => {
           // Sync with server state to ensure consistency
-          if (response.state) {
+          if (response.success && response.state) {
             setState(response.state);
             saveGameState(response.state);
+          } else if (!response.success) {
+            console.error('[Upgrade] Server action failed:', response.error);
+            setState(currentState);
+            saveGameState(currentState);
           }
         })
         .catch((err) => {
-          console.error('[Upgrade] API failed, rolling back:', err);
+          console.error('[Upgrade] Server action failed, rolling back:', err);
           // Rollback to previous state
           setState(currentState);
           saveGameState(currentState);
@@ -439,18 +453,22 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     setState(optimisticState);
     saveGameState(optimisticState);
 
-    // Call API and handle response
+    // Call Server Action and handle response
     if (initDataRef.current) {
-      gameAPI.completeTask(initDataRef.current, taskId)
+      completeTaskAction(initDataRef.current, taskId)
         .then((response) => {
           // Sync with server state to ensure consistency
-          if (response.state) {
+          if (response.success && response.state) {
             setState(response.state);
             saveGameState(response.state);
+          } else if (!response.success) {
+            console.error('[Task] Server action failed:', response.error);
+            setState(currentState);
+            saveGameState(currentState);
           }
         })
         .catch((err) => {
-          console.error('[Task] API failed, rolling back:', err);
+          console.error('[Task] Server action failed, rolling back:', err);
           // Rollback to previous state
           setState(currentState);
           saveGameState(currentState);
@@ -484,7 +502,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     });
 
     if (initDataRef.current) {
-      gameAPI.saveGame(initDataRef.current, stateRef.current).catch(console.error);
+      saveGame(initDataRef.current, stateRef.current).catch(console.error);
     }
   }, [recalculateStats]);
 
@@ -538,7 +556,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
   const save = useCallback(() => {
     saveGameState(stateRef.current);
     if (initDataRef.current) {
-      gameAPI.saveGame(initDataRef.current, stateRef.current).catch(console.error);
+      saveGame(initDataRef.current, stateRef.current).catch(console.error);
     }
   }, []);
 
