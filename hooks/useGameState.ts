@@ -30,6 +30,7 @@ import {
   calculateEnergyRestoration,
 } from '@/lib/storage';
 import { gameAPI } from './useGameAPI';
+import { toast } from 'sonner';
 
 export interface UseGameStateOptions {
   initData: string;
@@ -163,8 +164,11 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
         loadedFromApi.current = true;
       } catch (err) {
         console.error('Failed to load from API, using localStorage:', err);
-        // Keep localStorage state as fallback
-        setError(err instanceof Error ? err.message : 'Failed to load game');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load game';
+        setError(errorMessage);
+        toast.error('Failed to sync with server', {
+          description: errorMessage,
+        });
       } finally {
         setIsLoading(false);
         setIsLoaded(true);

@@ -4,6 +4,7 @@ import Script from "next/script";
 import { GameProvider } from "@/components/GameProvider";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -50,6 +51,7 @@ export default function RootLayout({
             </main>
             <BottomNav />
           </div>
+          <Toaster position="top-center" />
         </GameProvider>
       </body>
     </html>
