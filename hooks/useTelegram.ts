@@ -14,18 +14,22 @@ const DEV_USER: TelegramWebAppUser = {
   photo_url: undefined,
 };
 
-// Create mock initData for development
+// Create mock initData for development (only on client)
 function getDevInitData(): string {
+  // Use static timestamp during SSR to avoid prerender warnings
+  if (typeof window === 'undefined') {
+    const user = encodeURIComponent(JSON.stringify(DEV_USER));
+    return `user=${user}&auth_date=0`;
+  }
+
   const user = encodeURIComponent(JSON.stringify(DEV_USER));
   let initData = `user=${user}&auth_date=${Math.floor(Date.now() / 1000)}`;
 
   // Support referral testing via URL: localhost:3000?ref=204887498
-  if (typeof window !== 'undefined') {
-    const params = new URLSearchParams(window.location.search);
-    const refId = params.get('ref');
-    if (refId) {
-      initData += `&start_param=ref_${refId}`;
-    }
+  const params = new URLSearchParams(window.location.search);
+  const refId = params.get('ref');
+  if (refId) {
+    initData += `&start_param=ref_${refId}`;
   }
 
   return initData;
