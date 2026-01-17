@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { useGameState, UseGameStateResult } from '@/hooks/useGameState';
 import { useTelegram } from '@/hooks/useTelegram';
 import { Loader2, Coins } from 'lucide-react';
@@ -55,6 +55,18 @@ export function GameProvider({ children }: GameProviderProps) {
 }
 
 function OfflineEarningsNotification({ earnings }: { earnings: number }) {
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setVisible(false);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!visible) return null;
+
   return (
     <div className="fixed top-4 left-1/2 z-50 -translate-x-1/2 transform animate-fade-in">
       <div className="rounded-lg bg-secondary border px-6 py-3 shadow-lg">
