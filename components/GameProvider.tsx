@@ -1,9 +1,10 @@
 'use client';
 
-import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
+import { createContext, useContext, ReactNode, useEffect, useRef } from 'react';
 import { useGameState, UseGameStateResult } from '@/hooks/useGameState';
 import { useTelegram } from '@/hooks/useTelegram';
-import { Loader2, Coins } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 type GameContextType = UseGameStateResult;
 
@@ -16,6 +17,15 @@ interface GameProviderProps {
 export function GameProvider({ children }: GameProviderProps) {
   const { initData, isReady: isTelegramReady } = useTelegram();
   const gameState = useGameState({ initData });
+  const shownOfflineEarnings = useRef(false);
+
+  // Show offline earnings notification via sonner
+  useEffect(() => {
+    if (gameState.offlineEarnings > 0 && gameState.isLoaded && !shownOfflineEarnings.current) {
+      shownOfflineEarnings.current = true;
+      toast.success(`+${gameState.offlineEarnings.toLocaleString()} offline earnings!`);
+    }
+  }, [gameState.offlineEarnings, gameState.isLoaded]);
 
   // Show loading state while Telegram SDK initializes
   if (!isTelegramReady) {
@@ -41,42 +51,10 @@ export function GameProvider({ children }: GameProviderProps) {
     );
   }
 
-  // Show offline earnings notification
-  const showOfflineEarnings = gameState.offlineEarnings > 0 && gameState.isLoaded;
-
   return (
     <GameContext.Provider value={gameState}>
-      {showOfflineEarnings && (
-        <OfflineEarningsNotification earnings={gameState.offlineEarnings} />
-      )}
       {children}
     </GameContext.Provider>
-  );
-}
-
-function OfflineEarningsNotification({ earnings }: { earnings: number }) {
-  const [visible, setVisible] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setVisible(false);
-    }, 3000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (!visible) return null;
-
-  return (
-    <div className="fixed top-4 left-1/2 z-50 -translate-x-1/2 transform animate-fade-in">
-      <div className="rounded-lg bg-secondary border px-6 py-3 shadow-lg">
-        <p className="text-center flex items-center gap-2">
-          <Coins className="h-5 w-5" />
-          <span className="font-bold">+{earnings.toLocaleString()}</span>
-          <span className="text-sm text-muted-foreground">offline earnings!</span>
-        </p>
-      </div>
-    </div>
   );
 }
 
