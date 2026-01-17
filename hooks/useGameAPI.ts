@@ -63,44 +63,25 @@ async function apiRequest<T>(
   return data as T;
 }
 
-export function useGameAPI() {
-  const loadGame = async (initData: string): Promise<LoadGameResponse> => {
+// Export functions directly instead of hook to avoid re-render issues
+export const gameAPI = {
+  loadGame: (initData: string): Promise<LoadGameResponse> => {
     return apiRequest<LoadGameResponse>('load', { initData });
-  };
+  },
 
-  const saveGame = async (
-    initData: string,
-    state: GameState
-  ): Promise<SaveGameResponse> => {
+  saveGame: (initData: string, state: GameState): Promise<SaveGameResponse> => {
     return apiRequest<SaveGameResponse>('save', { initData, state });
-  };
+  },
 
-  const tap = async (
-    initData: string,
-    count: number = 1
-  ): Promise<TapResponse> => {
+  tap: (initData: string, count: number = 1): Promise<TapResponse> => {
     return apiRequest<TapResponse>('tap', { initData, count });
-  };
+  },
 
-  const purchaseUpgrade = async (
-    initData: string,
-    upgradeId: string
-  ): Promise<UpgradeResponse> => {
+  purchaseUpgrade: (initData: string, upgradeId: string): Promise<UpgradeResponse> => {
     return apiRequest<UpgradeResponse>('upgrade', { initData, upgradeId });
-  };
+  },
 
-  const completeTask = async (
-    initData: string,
-    taskId: string
-  ): Promise<TaskResponse> => {
+  completeTask: (initData: string, taskId: string): Promise<TaskResponse> => {
     return apiRequest<TaskResponse>('task', { initData, taskId });
-  };
-
-  return {
-    loadGame,
-    saveGame,
-    tap,
-    purchaseUpgrade,
-    completeTask,
-  };
-}
+  },
+};

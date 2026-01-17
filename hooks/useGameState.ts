@@ -19,7 +19,7 @@ import {
   calculateOfflineEarnings,
   calculateEnergyRestoration,
 } from '@/lib/storage';
-import { useGameAPI } from './useGameAPI';
+import { gameAPI } from './useGameAPI';
 
 export interface UseGameStateOptions {
   initData: string;
@@ -90,7 +90,6 @@ function createInitialState(): GameState {
 
 export function useGameState(options: UseGameStateOptions): UseGameStateResult {
   const { initData } = options;
-  const api = useGameAPI();
 
   // State
   const [state, setState] = useState<GameState>(() => createInitialState());
@@ -115,14 +114,21 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
 
   // Load game from API on mount
   useEffect(() => {
-    if (!initData || loadedFromApi.current) return;
+    if (loadedFromApi.current) return;
+
+    // If no initData, use localStorage only
+    if (!initData) {
+      setIsLoading(false);
+      setIsLoaded(true);
+      return;
+    }
 
     const loadFromApi = async () => {
       try {
         setIsLoading(true);
         setError(null);
 
-        const response = await api.loadGame(initData);
+        const response = await gameAPI.loadGame(initData);
 
         setState(response.state);
         setOfflineEarnings(response.offlineEarnings);
@@ -139,7 +145,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     };
 
     loadFromApi();
-  }, [initData, api]);
+  }, [initData]);
 
   // Energy regeneration timer
   useEffect(() => {
@@ -184,11 +190,11 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     if (!isLoaded || !initDataRef.current) return;
 
     const interval = setInterval(() => {
-      api.saveGame(initDataRef.current, stateRef.current).catch(console.error);
+      gameAPI.saveGame(initDataRef.current, stateRef.current).catch(console.error);
     }, 30000); // Save every 30 seconds
 
     return () => clearInterval(interval);
-  }, [isLoaded, api]);
+  }, [isLoaded]);
 
   // Tap handler with optimistic update
   const tap = useCallback(() => {
@@ -212,9 +218,9 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     // Sync with API in background (debounced via batch)
     // For performance, we don't await this
     if (initDataRef.current) {
-      api.tap(initDataRef.current, 1).catch(console.error);
+      gameAPI.tap(initDataRef.current, 1).catch(console.error);
     }
-  }, [api]);
+  }, []);
 
   // Purchase upgrade with optimistic update
   const purchaseUpgrade = useCallback((upgradeId: string): boolean => {
@@ -259,11 +265,11 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
 
     // Sync with API in background
     if (success && initDataRef.current) {
-      api.purchaseUpgrade(initDataRef.current, upgradeId).catch(console.error);
+      gameAPI.purchaseUpgrade(initDataRef.current, upgradeId).catch(console.error);
     }
 
     return success;
-  }, [api]);
+  }, []);
 
   // Complete task with optimistic update
   const completeTask = useCallback((taskId: string): boolean => {
@@ -306,11 +312,11 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
 
     // Sync with API in background
     if (success && initDataRef.current) {
-      api.completeTask(initDataRef.current, taskId).catch(console.error);
+      gameAPI.completeTask(initDataRef.current, taskId).catch(console.error);
     }
 
     return success;
-  }, [api]);
+  }, []);
 
   // Add referral
   const addReferral = useCallback((referral: Omit<Referral, 'id'>): void => {
@@ -329,9 +335,9 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
 
     // Sync with API
     if (initDataRef.current) {
-      api.saveGame(initDataRef.current, stateRef.current).catch(console.error);
+      gameAPI.saveGame(initDataRef.current, stateRef.current).catch(console.error);
     }
-  }, [api]);
+  }, []);
 
   // Get upgrade level
   const getUpgradeLevel = useCallback(
@@ -372,9 +378,9 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
   const save = useCallback(() => {
     saveGameState(stateRef.current);
     if (initDataRef.current) {
-      api.saveGame(initDataRef.current, stateRef.current).catch(console.error);
+      gameAPI.saveGame(initDataRef.current, stateRef.current).catch(console.error);
     }
-  }, [api]);
+  }, []);
 
   return {
     // State
