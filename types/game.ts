@@ -74,6 +74,28 @@ export interface Referral {
   joinedAt: number;
 }
 
+// Multi-tier referral earnings
+export interface ReferralEarnings {
+  tier1: number;  // Earned from direct referrals (10%)
+  tier2: number;  // Earned from tier 2 (3%)
+  tier3: number;  // Earned from tier 3 (1%)
+  total: number;
+}
+
+// Referral tier bonuses configuration
+export const REFERRAL_BONUSES = {
+  tier1: 10000,  // +10,000 for direct friend
+  tier2: 2000,   // +2,000 for friend of friend
+  tier3: 500,    // +500 for tier 3
+} as const;
+
+// Referral earnings percentages
+export const REFERRAL_PERCENTAGES = {
+  tier1: 0.10,  // 10% of earnings
+  tier2: 0.03,  // 3% of earnings
+  tier3: 0.01,  // 1% of earnings
+} as const;
+
 // Level system
 export interface LevelBonus {
   coinsPerTap?: number;
@@ -145,6 +167,7 @@ export interface GameState {
   upgrades: UserUpgrade[];
   tasks: UserTask[];
   referrals: Referral[];
+  referralEarnings: ReferralEarnings;
   lastEnergyUpdate: number;
   lastOfflineEarnings: number;
   lastDailyClaim: number | null;
@@ -164,6 +187,7 @@ export const DEFAULT_GAME_STATE: GameState = {
   upgrades: [],
   tasks: [],
   referrals: [],
+  referralEarnings: { tier1: 0, tier2: 0, tier3: 0, total: 0 },
   lastEnergyUpdate: Date.now(),
   lastOfflineEarnings: Date.now(),
   lastDailyClaim: null,

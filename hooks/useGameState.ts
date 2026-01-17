@@ -9,6 +9,7 @@ import {
   UserUpgrade,
   UserTask,
   Referral,
+  ReferralEarnings,
   calculateUpgradeCost,
   calculateTotalBonus,
   calculateLevelFromXP,
@@ -52,6 +53,7 @@ export interface UseGameStateResult {
   upgrades: UserUpgrade[];
   tasks: UserTask[];
   referrals: Referral[];
+  referralEarnings: ReferralEarnings;
   lastEnergyUpdate: number;
   lastOfflineEarnings: number;
   levelData: Level;

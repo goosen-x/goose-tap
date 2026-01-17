@@ -41,6 +41,7 @@ export function GameProvider({ children }: GameProviderProps) {
           upgrades: gameState.upgrades,
           tasks: gameState.tasks,
           referrals: gameState.referrals,
+          referralEarnings: gameState.referralEarnings,
           lastEnergyUpdate: gameState.lastEnergyUpdate,
           lastOfflineEarnings: gameState.lastOfflineEarnings,
           lastDailyClaim: gameState.lastDailyClaim,

@@ -1,5 +1,5 @@
 import { sql } from '@vercel/postgres';
-import { GameState, UserUpgrade, UserTask, Referral, calculateLevelFromXP } from '@/types/game';
+import { GameState, UserUpgrade, UserTask, Referral, calculateLevelFromXP, REFERRAL_BONUSES, REFERRAL_PERCENTAGES } from '@/types/game';
 
 // Database user row type
 export interface DbUser {
@@ -19,6 +19,14 @@ export interface DbUser {
   upgrades: UserUpgrade[];
   tasks: UserTask[];
   referrals: Referral[];
+  // Multi-tier referral chain (denormalized)
+  referrer_t1: number | null;
+  referrer_t2: number | null;
+  referrer_t3: number | null;
+  // Accumulated earnings from each tier
+  referral_earnings_t1: number;
+  referral_earnings_t2: number;
+  referral_earnings_t3: number;
   last_energy_update: Date;
   last_offline_earnings: Date;
   last_daily_claim: Date | null;
@@ -33,6 +41,11 @@ export function dbRowToGameState(row: DbUser): GameState {
   // Always calculate level from XP to ensure consistency
   const calculatedLevel = calculateLevelFromXP(xp);
 
+  // Calculate referral earnings
+  const tier1Earnings = Number(row.referral_earnings_t1) || 0;
+  const tier2Earnings = Number(row.referral_earnings_t2) || 0;
+  const tier3Earnings = Number(row.referral_earnings_t3) || 0;
+
   return {
     coins: Number(row.coins),
     xp,
@@ -45,15 +58,18 @@ export function dbRowToGameState(row: DbUser): GameState {
     upgrades: row.upgrades ?? [],
     tasks: row.tasks ?? [],
     referrals: row.referrals ?? [],
+    referralEarnings: {
+      tier1: tier1Earnings,
+      tier2: tier2Earnings,
+      tier3: tier3Earnings,
+      total: tier1Earnings + tier2Earnings + tier3Earnings,
+    },
     lastEnergyUpdate: new Date(row.last_energy_update).getTime(),
     lastOfflineEarnings: new Date(row.last_offline_earnings).getTime(),
     lastDailyClaim: row.last_daily_claim ? new Date(row.last_daily_claim).getTime() : null,
     dailyStreak: row.daily_streak || 0,
   };
 }
-
-// Referral bonus amount
-const REFERRAL_BONUS = 10000;
 
 // Get user by telegram_id, create if not exists
 export async function getOrCreateUser(
@@ -113,50 +129,89 @@ export async function getOrCreateUser(
   return newUser;
 }
 
-// Process referral bonus for the referrer
+// Process multi-tier referral bonus
 async function processReferralBonus(referrerId: number, newUser: DbUser): Promise<void> {
   console.log('[Referral] Starting processReferralBonus for referrer:', referrerId, 'newUser:', newUser.telegram_id);
 
   try {
-    // Get referrer
-    const { rows: referrerRows } = await sql<DbUser>`
-      SELECT * FROM users WHERE telegram_id = ${referrerId}
+    // 1. Get referral chain using recursive CTE (up to 3 levels)
+    const { rows: chainRows } = await sql`
+      WITH RECURSIVE referral_chain AS (
+        SELECT telegram_id, referred_by, username, first_name, referrals, 1 as depth
+        FROM users WHERE telegram_id = ${referrerId}
+        UNION ALL
+        SELECT u.telegram_id, u.referred_by, u.username, u.first_name, u.referrals, rc.depth + 1
+        FROM users u
+        JOIN referral_chain rc ON u.telegram_id = rc.referred_by
+        WHERE rc.depth < 3
+      )
+      SELECT telegram_id, depth, username, first_name, referrals FROM referral_chain ORDER BY depth
     `;
 
-    if (referrerRows.length === 0) {
-      console.log('[Referral] ERROR: Referrer not found:', referrerId);
-      return;
+    console.log('[Referral] Chain found:', chainRows.map(r => ({ id: r.telegram_id, depth: r.depth })));
+
+    const t1 = chainRows[0]?.telegram_id || null;  // Direct referrer
+    const t2 = chainRows[1]?.telegram_id || null;  // Referrer's referrer
+    const t3 = chainRows[2]?.telegram_id || null;  // Third level
+
+    // 2. Save the chain to the new user
+    await sql`
+      UPDATE users SET
+        referrer_t1 = ${t1},
+        referrer_t2 = ${t2},
+        referrer_t3 = ${t3},
+        updated_at = NOW()
+      WHERE telegram_id = ${newUser.telegram_id}
+    `;
+    console.log('[Referral] Chain saved for new user:', newUser.telegram_id, '-> t1:', t1, 't2:', t2, 't3:', t3);
+
+    // 3. Update T1 referrer's referrals array (for displaying in UI)
+    if (t1) {
+      const t1Data = chainRows[0];
+      const newReferral = {
+        id: `ref-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        username: newUser.username || undefined,
+        firstName: newUser.first_name || 'Anonymous',
+        coins: 0,
+        joinedAt: Date.now(),
+      };
+      const updatedReferrals = [...(t1Data.referrals ?? []), newReferral];
+
+      await sql`
+        UPDATE users SET
+          referrals = ${JSON.stringify(updatedReferrals)}::jsonb,
+          coins = coins + ${REFERRAL_BONUSES.tier1},
+          updated_at = NOW()
+        WHERE telegram_id = ${t1}
+      `;
+      console.log('[Referral] T1 bonus +', REFERRAL_BONUSES.tier1, 'awarded to:', t1);
     }
 
-    const referrer = referrerRows[0];
-    console.log('[Referral] Found referrer:', referrer.username, 'current coins:', referrer.coins, 'current referrals count:', referrer.referrals?.length ?? 0);
+    // 4. Award T2 bonus
+    if (t2) {
+      await sql`
+        UPDATE users SET
+          coins = coins + ${REFERRAL_BONUSES.tier2},
+          updated_at = NOW()
+        WHERE telegram_id = ${t2}
+      `;
+      console.log('[Referral] T2 bonus +', REFERRAL_BONUSES.tier2, 'awarded to:', t2);
+    }
 
-    // Create new referral entry with all required fields
-    const newReferral = {
-      id: `ref-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      username: newUser.username || undefined,
-      firstName: newUser.first_name || 'Anonymous',
-      coins: 0, // Initial coins earned from this referral
-      joinedAt: Date.now(),
-    };
+    // 5. Award T3 bonus
+    if (t3) {
+      await sql`
+        UPDATE users SET
+          coins = coins + ${REFERRAL_BONUSES.tier3},
+          updated_at = NOW()
+        WHERE telegram_id = ${t3}
+      `;
+      console.log('[Referral] T3 bonus +', REFERRAL_BONUSES.tier3, 'awarded to:', t3);
+    }
 
-    // Update referrer's referrals array and add bonus coins
-    const updatedReferrals = [...(referrer.referrals ?? []), newReferral];
-    console.log('[Referral] New referrals array length:', updatedReferrals.length);
-
-    const result = await sql`
-      UPDATE users SET
-        referrals = ${JSON.stringify(updatedReferrals)}::jsonb,
-        coins = coins + ${REFERRAL_BONUS},
-        updated_at = NOW()
-      WHERE telegram_id = ${referrerId}
-      RETURNING coins
-    `;
-
-    console.log('[Referral] SUCCESS! Bonus awarded to referrer:', referrerId, 'for new user:', newUser.telegram_id, 'new coins:', result.rows[0]?.coins);
+    console.log('[Referral] SUCCESS! Multi-tier bonuses processed for new user:', newUser.telegram_id);
   } catch (error) {
     console.error('[Referral] CRITICAL ERROR processing referral bonus:', error);
-    // Re-throw to make sure we know about failures
     throw error;
   }
 }
@@ -212,34 +267,53 @@ export async function atomicTap(
   return rows[0] ?? null;
 }
 
-// Atomic batch tap operation
+// Atomic batch tap operation with multi-tier referral earnings distribution
 export async function atomicBatchTap(
   telegramId: number,
   taps: number,
   coinsPerTap: number,
   xpPerTap: number = 1
 ): Promise<DbUser | null> {
-  // First check if we have enough energy
-  const { rows: checkRows } = await sql<DbUser>`
-    SELECT * FROM users
-    WHERE telegram_id = ${telegramId} AND energy >= ${taps}
-  `;
+  const totalCoins = taps * coinsPerTap;
+  const t1Share = Math.floor(totalCoins * REFERRAL_PERCENTAGES.tier1);  // 10%
+  const t2Share = Math.floor(totalCoins * REFERRAL_PERCENTAGES.tier2);  // 3%
+  const t3Share = Math.floor(totalCoins * REFERRAL_PERCENTAGES.tier3);  // 1%
 
-  if (checkRows.length === 0) {
-    return null;
-  }
-
+  // Single query with CTE: updates tapper + all referrers atomically
   const { rows } = await sql<DbUser>`
-    UPDATE users SET
-      coins = coins + ${taps * coinsPerTap},
-      xp = xp + ${taps * xpPerTap},
-      energy = energy - ${taps},
-      total_taps = total_taps + ${taps},
-      last_energy_update = NOW(),
-      updated_at = NOW()
-    WHERE telegram_id = ${telegramId}
-      AND energy >= ${taps}
-    RETURNING *
+    WITH tapper AS (
+      UPDATE users SET
+        coins = coins + ${totalCoins},
+        xp = xp + ${taps * xpPerTap},
+        energy = energy - ${taps},
+        total_taps = total_taps + ${taps},
+        last_energy_update = NOW(),
+        updated_at = NOW()
+      WHERE telegram_id = ${telegramId} AND energy >= ${taps}
+      RETURNING *
+    ),
+    referral_update AS (
+      UPDATE users SET
+        coins = coins + CASE
+          WHEN telegram_id = (SELECT referrer_t1 FROM tapper) THEN ${t1Share}
+          WHEN telegram_id = (SELECT referrer_t2 FROM tapper) THEN ${t2Share}
+          WHEN telegram_id = (SELECT referrer_t3 FROM tapper) THEN ${t3Share}
+          ELSE 0 END,
+        referral_earnings_t1 = referral_earnings_t1 + CASE
+          WHEN telegram_id = (SELECT referrer_t1 FROM tapper) THEN ${t1Share} ELSE 0 END,
+        referral_earnings_t2 = referral_earnings_t2 + CASE
+          WHEN telegram_id = (SELECT referrer_t2 FROM tapper) THEN ${t2Share} ELSE 0 END,
+        referral_earnings_t3 = referral_earnings_t3 + CASE
+          WHEN telegram_id = (SELECT referrer_t3 FROM tapper) THEN ${t3Share} ELSE 0 END,
+        updated_at = NOW()
+      WHERE telegram_id IN (
+        (SELECT referrer_t1 FROM tapper),
+        (SELECT referrer_t2 FROM tapper),
+        (SELECT referrer_t3 FROM tapper)
+      )
+      AND (SELECT COUNT(*) FROM tapper) > 0
+    )
+    SELECT * FROM tapper
   `;
 
   return rows[0] ?? null;
