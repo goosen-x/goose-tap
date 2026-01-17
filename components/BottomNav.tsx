@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, ListTodo, Users, TrendingUp } from 'lucide-react';
+import { Home, ListTodo, Users, TrendingUp, Trophy } from 'lucide-react';
 
 interface NavItemProps {
   href: string;
@@ -15,7 +15,7 @@ function NavItem({ href, icon, label, active }: NavItemProps) {
   return (
     <Link
       href={href}
-      className={`relative flex cursor-pointer flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-all ${
+      className={`relative flex flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 py-1 rounded-lg transition-all ${
         active
           ? 'text-foreground bg-secondary'
           : 'text-muted-foreground hover:text-foreground'
@@ -33,6 +33,7 @@ export function BottomNav() {
   const navItems = [
     { href: '/', icon: <Home className="h-5 w-5" />, label: 'Home' },
     { href: '/tasks', icon: <ListTodo className="h-5 w-5" />, label: 'Tasks' },
+    { href: '/leaderboard', icon: <Trophy className="h-5 w-5" />, label: 'Top' },
     { href: '/friends', icon: <Users className="h-5 w-5" />, label: 'Friends' },
     { href: '/earn', icon: <TrendingUp className="h-5 w-5" />, label: 'Earn' },
   ];
