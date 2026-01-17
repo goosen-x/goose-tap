@@ -162,6 +162,8 @@ async function processReferralBonus(referrerId: number, newUser: DbUser): Promis
 }
 
 // Update user game state
+// NOTE: referrals are NOT updated here - they are managed server-side only
+// (via processReferralBonus and fix-referrals endpoint)
 export async function updateUserState(
   telegramId: number,
   state: Partial<GameState>
@@ -178,7 +180,6 @@ export async function updateUserState(
       total_taps = COALESCE(${state.totalTaps ?? null}, total_taps),
       upgrades = COALESCE(${state.upgrades ? JSON.stringify(state.upgrades) : null}::jsonb, upgrades),
       tasks = COALESCE(${state.tasks ? JSON.stringify(state.tasks) : null}::jsonb, tasks),
-      referrals = COALESCE(${state.referrals ? JSON.stringify(state.referrals) : null}::jsonb, referrals),
       last_energy_update = COALESCE(${state.lastEnergyUpdate ? new Date(state.lastEnergyUpdate).toISOString() : null}::timestamp, last_energy_update),
       last_offline_earnings = COALESCE(${state.lastOfflineEarnings ? new Date(state.lastOfflineEarnings).toISOString() : null}::timestamp, last_offline_earnings),
       updated_at = NOW()
