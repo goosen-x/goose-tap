@@ -45,3 +45,5 @@ The app initializes Telegram WebApp on load:
 ## Environment Variables
 
 - `TELEGRAM_BOT_TOKEN` — Bot token from @BotFather (stored in Vercel, not committed)
+
+сейчас 2026 год
