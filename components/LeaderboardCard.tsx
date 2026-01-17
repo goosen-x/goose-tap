@@ -1,7 +1,6 @@
 'use client';
 
 import { LeaderboardEntry } from '@/types/game';
-import { formatNumber } from '@/lib/storage';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SlidingNumber } from '@/components/ui/sliding-number';
@@ -42,7 +41,7 @@ export function LeaderboardCard({ entry, isCurrentUser }: LeaderboardCardProps) 
         isCurrentUser && 'border-primary bg-primary/5'
       )}
     >
-      {/* Rank */}
+      {/* Rank - static */}
       <div className="flex h-8 w-8 shrink-0 items-center justify-center">
         {getRankDisplay(entry.rank)}
       </div>
@@ -65,14 +64,25 @@ export function LeaderboardCard({ entry, isCurrentUser }: LeaderboardCardProps) 
             <span className="ml-1 text-sm text-muted-foreground">@{entry.username}</span>
           )}
         </span>
-        <span className="text-xs text-muted-foreground flex items-center gap-0.5">
-          Lvl <SlidingNumber value={entry.level} />
+        <span className="text-xs text-muted-foreground">
+          {/* Level: dynamic only for current user */}
+          {isCurrentUser ? (
+            <span className="flex items-center gap-0.5">Lvl <SlidingNumber value={entry.level} /></span>
+          ) : (
+            `Lvl ${entry.level}`
+          )}
         </span>
       </div>
 
-      {/* Coins */}
+      {/* Coins: dynamic only for current user */}
       <div className="text-right shrink-0">
-        <span className="font-semibold flex items-center"><SlidingNumber value={entry.coins} /></span>
+        {isCurrentUser ? (
+          <span className="font-semibold flex items-center">
+            <SlidingNumber value={entry.coins} />
+          </span>
+        ) : (
+          <span className="font-semibold">{entry.coins.toLocaleString()}</span>
+        )}
       </div>
     </Card>
   );

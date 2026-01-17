@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Task } from '@/types/game';
-import { formatNumber } from '@/lib/storage';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

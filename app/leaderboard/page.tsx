@@ -5,27 +5,24 @@ import { useLeaderboard } from '@/hooks/useLeaderboard';
 import { useTelegram } from '@/hooks/useTelegram';
 import { useGame } from '@/components/GameProvider';
 import { LeaderboardCard } from '@/components/LeaderboardCard';
-import { formatNumber } from '@/lib/storage';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SlidingNumber } from '@/components/ui/sliding-number';
 import { Trophy, RefreshCw, Users, Loader2 } from 'lucide-react';
 
-function LeaderboardSkeleton() {
+// Skeleton for a single leaderboard entry
+function EntrySkeleton({ index }: { index: number }) {
+  const isTopThree = index < 3;
   return (
-    <div className="flex flex-col gap-2">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <Card key={i} className="flex flex-row items-center gap-3 p-3 animate-pulse">
-          <div className="h-8 w-8 rounded bg-secondary" />
-          <div className="h-10 w-10 rounded-full bg-secondary" />
-          <div className="flex flex-1 flex-col gap-1">
-            <div className="h-4 w-24 rounded bg-secondary" />
-            <div className="h-3 w-12 rounded bg-secondary" />
-          </div>
-          <div className="h-4 w-16 rounded bg-secondary" />
-        </Card>
-      ))}
-    </div>
+    <Card className="flex flex-row items-center gap-3 p-3 animate-pulse">
+      <div className={`h-6 ${isTopThree ? 'w-6' : 'w-8'} rounded bg-secondary shrink-0`} />
+      <div className="h-10 w-10 rounded-full bg-secondary shrink-0" />
+      <div className="flex flex-1 flex-col gap-1.5 min-w-0">
+        <div className="h-4 w-28 rounded bg-secondary" />
+        <div className="h-3 w-10 rounded bg-secondary" />
+      </div>
+      <div className="h-4 w-16 rounded bg-secondary shrink-0" />
+    </Card>
   );
 }
 
@@ -76,42 +73,71 @@ export default function LeaderboardPage() {
 
   return (
     <div className="flex flex-1 flex-col bg-background overflow-hidden">
-      {/* Header with current user rank */}
+      {/* Static header */}
       <div className="shrink-0 p-4 pb-2">
-        <h1 className="mb-3 text-lg font-semibold flex items-center gap-2">
-          <Trophy className="h-5 w-5" />
-          Leaderboard
-        </h1>
+        <div className="flex items-center justify-between mb-3">
+          <h1 className="text-lg font-semibold flex items-center gap-2">
+            <Trophy className="h-5 w-5" />
+            Leaderboard
+          </h1>
+          {/* Static: total players count */}
+          {totalPlayers > 0 && (
+            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Users className="h-4 w-4" />
+              <span>{totalPlayers.toLocaleString()}</span>
+            </div>
+          )}
+        </div>
 
-        {/* Current user rank card */}
+        {/* User rank card - only coins are dynamic */}
         {currentUser && (
           <Card className="p-4 bg-primary/5 border-primary">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Your Rank</p>
-                <span className="text-2xl font-bold flex items-center">#<SlidingNumber value={currentUser.rank} /></span>
+                {/* Static: rank from API */}
+                <span className="text-2xl font-bold">#{currentUser.rank}</span>
               </div>
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Your Coins</p>
-                <span className="text-lg font-semibold flex items-center justify-end"><SlidingNumber value={coins} /></span>
+                {/* Dynamic: real-time coins from local state */}
+                <span className="text-lg font-semibold flex items-center justify-end">
+                  <SlidingNumber value={coins} />
+                </span>
               </div>
             </div>
           </Card>
         )}
 
-        {/* Stats */}
-        {totalPlayers > 0 && (
-          <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
-            <Users className="h-4 w-4" />
-            <span className="flex items-center gap-1"><SlidingNumber value={totalPlayers} /> players</span>
-          </div>
+        {/* Loading state for user card */}
+        {isLoading && !currentUser && (
+          <Card className="p-4 animate-pulse">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="h-3 w-16 rounded bg-secondary mb-2" />
+                <div className="h-8 w-12 rounded bg-secondary" />
+              </div>
+              <div className="flex flex-col items-end">
+                <div className="h-3 w-16 rounded bg-secondary mb-2" />
+                <div className="h-6 w-20 rounded bg-secondary" />
+              </div>
+            </div>
+          </Card>
         )}
       </div>
 
       {/* Leaderboard list */}
       <main className="flex-1 overflow-y-auto p-4 pt-2">
-        {isLoading && <LeaderboardSkeleton />}
+        {/* Loading skeleton */}
+        {isLoading && (
+          <div className="flex flex-col gap-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <EntrySkeleton key={i} index={i} />
+            ))}
+          </div>
+        )}
 
+        {/* Error state */}
         {error && (
           <div className="mt-12 text-center">
             <p className="text-muted-foreground mb-4">{error}</p>
@@ -122,6 +148,7 @@ export default function LeaderboardPage() {
           </div>
         )}
 
+        {/* Empty state */}
         {!isLoading && !error && entries.length === 0 && (
           <div className="mt-12 text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
@@ -134,11 +161,12 @@ export default function LeaderboardPage() {
           </div>
         )}
 
+        {/* Leaderboard entries */}
         {!isLoading && !error && entries.length > 0 && (
           <div className="flex flex-col gap-2">
             {entries.map((entry) => {
               const isCurrentUser = entry.telegramId === user?.id;
-              // Use local state for current user to show real-time data
+              // Only current user gets real-time coin/level updates
               const displayEntry = isCurrentUser
                 ? { ...entry, coins, level }
                 : entry;
@@ -151,7 +179,7 @@ export default function LeaderboardPage() {
               );
             })}
 
-            {/* Load more trigger */}
+            {/* Infinite scroll trigger */}
             {hasMore && (
               <div ref={loadMoreRef} className="flex justify-center py-4">
                 {isLoadingMore && (

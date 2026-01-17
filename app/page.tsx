@@ -3,10 +3,13 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTelegram } from '@/hooks/useTelegram';
 import { useGame } from '@/components/GameProvider';
+import { toast } from 'sonner';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
 import { SlidingNumber } from '@/components/ui/sliding-number';
 import { Zap } from 'lucide-react';
+
+const NO_ENERGY_TOAST_THROTTLE = 2000; // Show "no energy" toast at most once per 2 seconds
 
 function GooseLogo({ className }: { className?: string }) {
   return (
@@ -45,6 +48,7 @@ export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const tapIdRef = useRef(0);
+  const lastNoEnergyToastRef = useRef(0);
 
   useEffect(() => {
     setIsMounted(true);
@@ -69,7 +73,15 @@ export default function Home() {
       const rotateY = (x - centerX) / 8;
       setTilt({ x: rotateX, y: rotateY });
 
-      if (energy <= 0) return;
+      if (energy <= 0) {
+        // Show toast only if not recently shown (throttled)
+        const now = Date.now();
+        if (now - lastNoEnergyToastRef.current > NO_ENERGY_TOAST_THROTTLE) {
+          toast.error('No energy! Wait for it to recharge.');
+          lastNoEnergyToastRef.current = now;
+        }
+        return;
+      }
 
       // Haptic feedback (safe - checks version support)
       hapticFeedback('light');

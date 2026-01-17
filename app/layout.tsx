@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
+import { QueryProvider } from "@/components/QueryProvider";
 import { GameProvider } from "@/components/GameProvider";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
@@ -43,16 +44,18 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
-        <GameProvider>
-          <div className="flex h-screen flex-col">
-            <Header />
-            <main className="flex-1 overflow-auto">
-              {children}
-            </main>
-            <BottomNav />
-          </div>
-          <Toaster position="top-center" />
-        </GameProvider>
+        <QueryProvider>
+          <GameProvider>
+            <div className="flex h-screen flex-col">
+              <Header />
+              <main className="flex-1 overflow-auto">
+                {children}
+              </main>
+              <BottomNav />
+            </div>
+            <Toaster position="top-center" />
+          </GameProvider>
+        </QueryProvider>
       </body>
     </html>
   );

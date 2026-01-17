@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   GameState,
   DEFAULT_GAME_STATE,
@@ -26,18 +26,14 @@ import {
 import {
   loadGameState,
   saveGameState,
-  calculateOfflineEarnings,
-  calculateEnergyRestoration,
 } from '@/lib/storage';
 import { gameAPI } from './useGameAPI';
-import { toast } from 'sonner';
 
 export interface UseGameStateOptions {
   initData: string;
 }
 
 export interface UseGameStateResult {
-  // State
   coins: number;
   xp: number;
   energy: number;
@@ -51,89 +47,59 @@ export interface UseGameStateResult {
   referrals: Referral[];
   lastEnergyUpdate: number;
   lastOfflineEarnings: number;
-
-  // Level info
   levelData: Level;
   nextLevelData: Level | null;
   xpToNextLevel: number;
-  levelProgress: number; // 0-100%
-
-  // Daily rewards
+  levelProgress: number;
   dailyStreak: number;
   lastDailyClaim: number | null;
   canClaimDailyReward: boolean;
   currentDailyReward: DailyReward;
   timeUntilNextDaily: number;
   allDailyRewards: DailyReward[];
-
-  // Status
   isLoaded: boolean;
   isLoading: boolean;
   error: string | null;
   offlineEarnings: number;
-
-  // Actions
   tap: () => void;
   purchaseUpgrade: (upgradeId: string) => boolean;
   completeTask: (taskId: string) => boolean;
   addReferral: (referral: Omit<Referral, 'id'>) => void;
   claimDailyReward: () => Promise<DailyReward | null>;
   save: () => void;
-
-  // Helpers
   getUpgradeLevel: (upgradeId: string) => number;
   isTaskCompleted: (taskId: string) => boolean;
   getTaskProgress: (taskId: string) => number;
 }
 
-// Create initial state from localStorage as cache
 function createInitialState(): GameState {
   if (typeof window === 'undefined') {
     return DEFAULT_GAME_STATE;
   }
-
-  const loaded = loadGameState();
-
-  // Calculate offline earnings
-  const offlineEarnings = calculateOfflineEarnings(
-    loaded.lastOfflineEarnings,
-    loaded.coinsPerHour
-  );
-
-  // Calculate energy restoration
-  const restoredEnergy = calculateEnergyRestoration(
-    loaded.lastEnergyUpdate,
-    loaded.energy,
-    loaded.maxEnergy
-  );
-
-  return {
-    ...loaded,
-    coins: loaded.coins + offlineEarnings,
-    energy: restoredEnergy,
-    lastEnergyUpdate: Date.now(),
-    lastOfflineEarnings: Date.now(),
-  };
+  return loadGameState();
 }
 
 export function useGameState(options: UseGameStateOptions): UseGameStateResult {
   const { initData } = options;
 
-  // State
+  // Core state
   const [state, setState] = useState<GameState>(() => createInitialState());
   const [isLoading, setIsLoading] = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [offlineEarnings, setOfflineEarnings] = useState(0);
 
-  // Refs
+  // Refs (don't cause re-renders)
   const stateRef = useRef(state);
   const initDataRef = useRef(initData);
-  const loadedFromApi = useRef(false);
+  const loadedRef = useRef(false);
   const lastTapRef = useRef(0);
+  const tapBatchRef = useRef(0);
+  const accumulatedCoins = useRef(0);
 
-  // Throttle constant for tap (50ms between taps)
+  // Constants
   const TAP_THROTTLE_MS = 50;
+  const TAP_BATCH_SIZE = 10;
 
   // Keep refs in sync
   useEffect(() => {
@@ -144,125 +110,118 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     initDataRef.current = initData;
   }, [initData]);
 
-  // Load game from API on mount
+  // Load from API once on mount
   useEffect(() => {
-    if (loadedFromApi.current) return;
+    if (loadedRef.current) return;
 
-    // If no initData, use localStorage only
     if (!initData) {
-      console.log('[GameState] No initData, using localStorage only');
-      toast.warning('No Telegram data', {
-        description: 'Using local storage only',
-      });
       setIsLoading(false);
       setIsLoaded(true);
       return;
     }
 
-    const loadFromApi = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
+    loadedRef.current = true;
 
-        const response = await gameAPI.loadGame(initData);
-
-        console.log('[GameState] Loaded from API:', { coins: response.state.coins, level: response.state.level });
-        toast.success('Synced with server', {
-          description: `Coins: ${response.state.coins}, Level: ${response.state.level}`,
-        });
-
+    gameAPI.loadGame(initData)
+      .then((response) => {
         setState(response.state);
+        saveGameState(response.state);
         setOfflineEarnings(response.offlineEarnings);
-        saveGameState(response.state); // Cache in localStorage
-        loadedFromApi.current = true;
-      } catch (err) {
-        console.error('Failed to load from API, using localStorage:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load game';
-        setError(errorMessage);
-        toast.error('Failed to sync with server', {
-          description: errorMessage,
-        });
-        // Show what we loaded from localStorage as fallback
-        const localState = loadGameState();
-        toast.info('Using local data', {
-          description: `Coins: ${localState.coins}, Level: ${localState.level}`,
-        });
-      } finally {
         setIsLoading(false);
         setIsLoaded(true);
-      }
-    };
-
-    loadFromApi();
+      })
+      .catch((err) => {
+        console.error('[GameState] Load failed:', err);
+        setError(err.message);
+        setIsLoading(false);
+        setIsLoaded(true);
+      });
   }, [initData]);
 
-  // Energy regeneration timer
+  // Energy regeneration - use ref to batch updates and reduce re-renders
+  const energyAccumulator = useRef(0);
+  const ENERGY_REGEN_RATE = 1; // 1 energy per second
+  const ENERGY_UPDATE_INTERVAL = 1000; // Check every second
+  const ENERGY_BATCH_THRESHOLD = 3; // Only update state every 3 energy points
+
   useEffect(() => {
     if (!isLoaded) return;
 
     const interval = setInterval(() => {
       setState((prev) => {
-        if (prev.energy >= prev.maxEnergy) return prev;
-        const newState = {
-          ...prev,
-          energy: Math.min(prev.energy + 1, prev.maxEnergy),
-          lastEnergyUpdate: Date.now(),
-        };
-        saveGameState(newState); // Cache locally
-        return newState;
+        if (prev.energy >= prev.maxEnergy) {
+          energyAccumulator.current = 0;
+          return prev;
+        }
+
+        energyAccumulator.current += ENERGY_REGEN_RATE;
+
+        // Only trigger re-render when batch threshold is reached OR energy is low
+        const shouldUpdate = energyAccumulator.current >= ENERGY_BATCH_THRESHOLD ||
+          prev.energy < 10; // Always update when energy is very low
+
+        if (shouldUpdate) {
+          const energyToAdd = Math.floor(energyAccumulator.current);
+          energyAccumulator.current -= energyToAdd;
+          const newEnergy = Math.min(prev.energy + energyToAdd, prev.maxEnergy);
+
+          if (newEnergy === prev.energy) return prev;
+
+          const newState = {
+            ...prev,
+            energy: newEnergy,
+            lastEnergyUpdate: Date.now(),
+          };
+          saveGameState(newState);
+          return newState;
+        }
+
+        return prev;
       });
-    }, 1000);
+    }, ENERGY_UPDATE_INTERVAL);
 
     return () => clearInterval(interval);
   }, [isLoaded]);
 
-  // Passive income timer (coins per hour)
-  // Accumulate fractional coins to handle small hourly rates
-  const accumulatedCoins = useRef(0);
+  // Passive income - batch updates to reduce re-renders
+  const PASSIVE_INCOME_UPDATE_INTERVAL = 1000; // Check every second
+  const PASSIVE_INCOME_BATCH_THRESHOLD = 5; // Only update state when 5+ coins accumulated
 
   useEffect(() => {
     if (!isLoaded || state.coinsPerHour === 0) return;
 
     const interval = setInterval(() => {
       setState((prev) => {
-        // Add fractional coins per second
         accumulatedCoins.current += prev.coinsPerHour / 3600;
 
-        // Only add whole coins to the state
-        const wholeCoins = Math.floor(accumulatedCoins.current);
-        if (wholeCoins > 0) {
+        // Only update state when threshold is reached
+        if (accumulatedCoins.current >= PASSIVE_INCOME_BATCH_THRESHOLD) {
+          const wholeCoins = Math.floor(accumulatedCoins.current);
           accumulatedCoins.current -= wholeCoins;
-          const newState = {
-            ...prev,
-            coins: prev.coins + wholeCoins,
-          };
-          saveGameState(newState); // Cache locally
+          const newState = { ...prev, coins: prev.coins + wholeCoins };
+          saveGameState(newState);
           return newState;
         }
-
         return prev;
       });
-    }, 1000);
+    }, PASSIVE_INCOME_UPDATE_INTERVAL);
 
     return () => clearInterval(interval);
   }, [isLoaded, state.coinsPerHour]);
 
-  // Periodic save to API
+  // Periodic save to server (every 10 seconds)
   useEffect(() => {
-    if (!isLoaded || !initDataRef.current) return;
+    if (!isLoaded || !initData) return;
 
     const interval = setInterval(() => {
       gameAPI.saveGame(initDataRef.current, stateRef.current).catch(console.error);
-    }, 30000); // Save every 30 seconds
+    }, 10000);
 
     return () => clearInterval(interval);
-  }, [isLoaded]);
+  }, [isLoaded, initData]);
 
-  // Helper to recalculate stats with upgrades and level bonuses
-  const recalculateStats = useCallback((
-    upgrades: UserUpgrade[],
-    level: number
-  ) => {
+  // Helper to recalculate stats
+  const recalculateStats = useCallback((upgrades: UserUpgrade[], level: number) => {
     const upgradeBonus = {
       tap: calculateTotalBonus(upgrades, 'tap'),
       hour: calculateTotalBonus(upgrades, 'hour'),
@@ -277,16 +236,12 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     };
   }, []);
 
-  // Tap handler with optimistic update and throttle
+  // Tap handler
   const tap = useCallback(() => {
-    // Throttle rapid clicks
     const now = Date.now();
-    if (now - lastTapRef.current < TAP_THROTTLE_MS) {
-      return; // Ignore rapid clicks
-    }
+    if (now - lastTapRef.current < TAP_THROTTLE_MS) return;
     lastTapRef.current = now;
 
-    // Optimistic update
     setState((prev) => {
       if (prev.energy <= 0) return prev;
 
@@ -294,7 +249,6 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
       const newLevel = calculateLevelFromXP(newXP);
       const newTotalTaps = prev.totalTaps + 1;
 
-      // Recalculate stats if level changed
       let stats = {
         coinsPerTap: prev.coinsPerTap,
         coinsPerHour: prev.coinsPerHour,
@@ -313,206 +267,206 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
         totalTaps: newTotalTaps,
         ...stats,
       };
-      saveGameState(newState); // Cache locally
+      saveGameState(newState);
       return newState;
     });
 
-    // Sync with API in background (debounced via batch)
-    // For performance, we don't await this
-    if (initDataRef.current) {
-      gameAPI.tap(initDataRef.current, 1).catch(console.error);
+    // Batch taps for server
+    tapBatchRef.current += 1;
+    if (tapBatchRef.current >= TAP_BATCH_SIZE && initDataRef.current) {
+      const count = tapBatchRef.current;
+      tapBatchRef.current = 0;
+      gameAPI.tap(initDataRef.current, count).catch(console.error);
     }
   }, [recalculateStats]);
 
-  // Purchase upgrade with optimistic update
+  // Flush taps on visibility change
+  useEffect(() => {
+    const flush = () => {
+      if (tapBatchRef.current > 0 && initDataRef.current) {
+        const count = tapBatchRef.current;
+        tapBatchRef.current = 0;
+        gameAPI.tap(initDataRef.current, count).catch(console.error);
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      flush();
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
+
+  // Purchase upgrade - server-first to ensure persistence
   const purchaseUpgrade = useCallback((upgradeId: string): boolean => {
     const upgrade = UPGRADES.find((u) => u.id === upgradeId);
     if (!upgrade) return false;
 
-    let success = false;
+    // Pre-validate locally
+    const currentState = stateRef.current;
+    const existing = currentState.upgrades.find((u) => u.upgradeId === upgradeId);
+    const currentLevel = existing?.level ?? 0;
 
-    setState((prev) => {
-      const existingUpgrade = prev.upgrades.find((u) => u.upgradeId === upgradeId);
-      const currentLevel = existingUpgrade?.level ?? 0;
+    if (currentLevel >= upgrade.maxLevel) return false;
 
-      if (currentLevel >= upgrade.maxLevel) return prev;
+    const cost = calculateUpgradeCost(upgrade, currentLevel);
+    if (currentState.coins < cost) return false;
 
-      const cost = calculateUpgradeCost(upgrade, currentLevel);
-      if (prev.coins < cost) return prev;
+    // Optimistic update
+    const newLevel = currentLevel + 1;
+    const newUpgrades: UserUpgrade[] = existing
+      ? currentState.upgrades.map((u) => u.upgradeId === upgradeId ? { ...u, level: newLevel } : u)
+      : [...currentState.upgrades, { upgradeId, level: 1 }];
 
-      const newUpgradeLevel = currentLevel + 1;
-      const newUpgrades: UserUpgrade[] = existingUpgrade
-        ? prev.upgrades.map((u) =>
-            u.upgradeId === upgradeId ? { ...u, level: newUpgradeLevel } : u
-          )
-        : [...prev.upgrades, { upgradeId, level: 1 }];
+    const xpGained = XP_REWARDS.upgrade * newLevel;
+    const newXP = currentState.xp + xpGained;
+    const newPlayerLevel = calculateLevelFromXP(newXP);
+    const stats = recalculateStats(newUpgrades, newPlayerLevel);
 
-      // Award XP for upgrade (100 * upgrade level)
-      const xpGained = XP_REWARDS.upgrade * newUpgradeLevel;
-      const newXP = prev.xp + xpGained;
-      const newLevel = calculateLevelFromXP(newXP);
+    const optimisticState = {
+      ...currentState,
+      coins: currentState.coins - cost,
+      xp: newXP,
+      level: newPlayerLevel,
+      upgrades: newUpgrades,
+      ...stats,
+    };
 
-      // Recalculate stats with new upgrades and level
-      const stats = recalculateStats(newUpgrades, newLevel);
+    // Update local state immediately for responsive UI
+    setState(optimisticState);
+    saveGameState(optimisticState);
 
-      success = true;
-
-      const newState = {
-        ...prev,
-        coins: prev.coins - cost,
-        xp: newXP,
-        level: newLevel,
-        upgrades: newUpgrades,
-        ...stats,
-      };
-      saveGameState(newState); // Cache locally
-      return newState;
-    });
-
-    // Sync with API in background
-    if (success && initDataRef.current) {
-      gameAPI.purchaseUpgrade(initDataRef.current, upgradeId).catch(console.error);
+    // Call API and handle response
+    if (initDataRef.current) {
+      gameAPI.purchaseUpgrade(initDataRef.current, upgradeId)
+        .then((response) => {
+          // Sync with server state to ensure consistency
+          if (response.state) {
+            setState(response.state);
+            saveGameState(response.state);
+          }
+        })
+        .catch((err) => {
+          console.error('[Upgrade] API failed, rolling back:', err);
+          // Rollback to previous state
+          setState(currentState);
+          saveGameState(currentState);
+        });
     }
 
-    return success;
+    return true;
   }, [recalculateStats]);
 
-  // Complete task with optimistic update
+  // Complete task - server-first to ensure persistence
   const completeTask = useCallback((taskId: string): boolean => {
     const task = TASKS.find((t) => t.id === taskId);
     if (!task) return false;
 
-    let success = false;
+    // Pre-validate locally
+    const currentState = stateRef.current;
+    const existing = currentState.tasks.find((t) => t.taskId === taskId);
+    if (existing?.status === 'claimed') return false;
 
-    setState((prev) => {
-      const existingTask = prev.tasks.find((t) => t.taskId === taskId);
-      if (existingTask?.status === 'claimed') return prev;
+    if (task.type === 'referral' && task.requirement && currentState.referrals.length < task.requirement) return false;
+    if (task.id === 'reach-level-5' && task.requirement && currentState.level < task.requirement) return false;
 
-      // Check requirements
-      if (task.type === 'referral' && task.requirement) {
-        if (prev.referrals.length < task.requirement) return prev;
-      }
+    // Optimistic update
+    const newTasks: UserTask[] = existing
+      ? currentState.tasks.map((t) => t.taskId === taskId ? { ...t, status: 'claimed' as const, completedAt: Date.now() } : t)
+      : [...currentState.tasks, { taskId, status: 'claimed' as const, completedAt: Date.now() }];
 
-      if (task.id === 'reach-level-5' && task.requirement) {
-        if (prev.level < task.requirement) return prev;
-      }
+    const newXP = currentState.xp + XP_REWARDS.task;
+    const newLevel = calculateLevelFromXP(newXP);
 
-      const newTasks: UserTask[] = existingTask
-        ? prev.tasks.map((t) =>
-            t.taskId === taskId
-              ? { ...t, status: 'claimed' as const, completedAt: Date.now() }
-              : t
-          )
-        : [...prev.tasks, { taskId, status: 'claimed' as const, completedAt: Date.now() }];
-
-      // Award XP for task
-      const newXP = prev.xp + XP_REWARDS.task;
-      const newLevel = calculateLevelFromXP(newXP);
-
-      // Recalculate stats if level changed
-      let stats = {
-        coinsPerTap: prev.coinsPerTap,
-        coinsPerHour: prev.coinsPerHour,
-        maxEnergy: prev.maxEnergy,
-      };
-      if (newLevel !== prev.level) {
-        stats = recalculateStats(prev.upgrades, newLevel);
-      }
-
-      success = true;
-
-      const newState = {
-        ...prev,
-        coins: prev.coins + task.reward,
-        xp: newXP,
-        level: newLevel,
-        tasks: newTasks,
-        ...stats,
-      };
-      saveGameState(newState); // Cache locally
-      return newState;
-    });
-
-    // Sync with API in background
-    if (success && initDataRef.current) {
-      gameAPI.completeTask(initDataRef.current, taskId).catch(console.error);
+    let stats = { coinsPerTap: currentState.coinsPerTap, coinsPerHour: currentState.coinsPerHour, maxEnergy: currentState.maxEnergy };
+    if (newLevel !== currentState.level) {
+      stats = recalculateStats(currentState.upgrades, newLevel);
     }
 
-    return success;
+    const optimisticState = {
+      ...currentState,
+      coins: currentState.coins + task.reward,
+      xp: newXP,
+      level: newLevel,
+      tasks: newTasks,
+      ...stats,
+    };
+
+    // Update local state immediately for responsive UI
+    setState(optimisticState);
+    saveGameState(optimisticState);
+
+    // Call API and handle response
+    if (initDataRef.current) {
+      gameAPI.completeTask(initDataRef.current, taskId)
+        .then((response) => {
+          // Sync with server state to ensure consistency
+          if (response.state) {
+            setState(response.state);
+            saveGameState(response.state);
+          }
+        })
+        .catch((err) => {
+          console.error('[Task] API failed, rolling back:', err);
+          // Rollback to previous state
+          setState(currentState);
+          saveGameState(currentState);
+        });
+    }
+
+    return true;
   }, [recalculateStats]);
 
   // Add referral
   const addReferral = useCallback((referral: Omit<Referral, 'id'>): void => {
     setState((prev) => {
-      // Award XP for referral
       const newXP = prev.xp + XP_REWARDS.referral;
       const newLevel = calculateLevelFromXP(newXP);
 
-      // Recalculate stats if level changed
-      let stats = {
-        coinsPerTap: prev.coinsPerTap,
-        coinsPerHour: prev.coinsPerHour,
-        maxEnergy: prev.maxEnergy,
-      };
+      let stats = { coinsPerTap: prev.coinsPerTap, coinsPerHour: prev.coinsPerHour, maxEnergy: prev.maxEnergy };
       if (newLevel !== prev.level) {
         stats = recalculateStats(prev.upgrades, newLevel);
       }
 
       const newState = {
         ...prev,
-        referrals: [
-          ...prev.referrals,
-          { ...referral, id: `ref-${Date.now()}-${Math.random().toString(36).slice(2)}` },
-        ],
-        coins: prev.coins + 10000, // Referral bonus
+        referrals: [...prev.referrals, { ...referral, id: `ref-${Date.now()}-${Math.random().toString(36).slice(2)}` }],
+        coins: prev.coins + 10000,
         xp: newXP,
         level: newLevel,
         ...stats,
       };
-      saveGameState(newState); // Cache locally
+      saveGameState(newState);
       return newState;
     });
 
-    // Sync with API
     if (initDataRef.current) {
       gameAPI.saveGame(initDataRef.current, stateRef.current).catch(console.error);
     }
   }, [recalculateStats]);
 
-  // Get upgrade level
+  // Helpers
   const getUpgradeLevel = useCallback(
-    (upgradeId: string): number => {
-      return state.upgrades.find((u) => u.upgradeId === upgradeId)?.level ?? 0;
-    },
+    (upgradeId: string) => state.upgrades.find((u) => u.upgradeId === upgradeId)?.level ?? 0,
     [state.upgrades]
   );
 
-  // Check if task is completed
   const isTaskCompleted = useCallback(
-    (taskId: string): boolean => {
-      return state.tasks.find((t) => t.taskId === taskId)?.status === 'claimed';
-    },
+    (taskId: string) => state.tasks.find((t) => t.taskId === taskId)?.status === 'claimed',
     [state.tasks]
   );
 
-  // Get task progress
   const getTaskProgress = useCallback(
     (taskId: string): number => {
       const task = TASKS.find((t) => t.id === taskId);
       if (!task?.requirement) return 0;
-
-      if (task.type === 'referral') {
-        return state.referrals.length;
-      }
-
-      if (task.id === 'reach-level-5') {
-        return state.level;
-      }
-
-      if (task.id === 'tap-1000') {
-        return state.totalTaps;
-      }
-
+      if (task.type === 'referral') return state.referrals.length;
+      if (task.id === 'reach-level-5') return state.level;
+      if (task.id === 'tap-1000') return state.totalTaps;
       return 0;
     },
     [state.referrals.length, state.level, state.totalTaps]
@@ -530,21 +484,13 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
         body: JSON.stringify({ initData: initDataRef.current }),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        console.error('Daily claim error:', error);
-        return null;
-      }
+      if (!response.ok) return null;
 
       const data = await response.json();
-
-      // Update local state with server response
       setState(data.state);
       saveGameState(data.state);
-
       return data.reward as DailyReward;
-    } catch (error) {
-      console.error('Failed to claim daily reward:', error);
+    } catch {
       return null;
     }
   }, []);
@@ -557,50 +503,81 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     }
   }, []);
 
-  // Calculate level progress info
-  const levelData = getLevelData(state.level);
-  const nextLevelData = getNextLevelData(state.level);
-  const xpToNextLevel = nextLevelData ? nextLevelData.xpRequired - state.xp : 0;
-  const levelProgress = nextLevelData
-    ? ((state.xp - levelData.xpRequired) / (nextLevelData.xpRequired - levelData.xpRequired)) * 100
-    : 100;
+  // Derived values - memoized to prevent recalculation on every render
+  const levelData = useMemo(() => getLevelData(state.level), [state.level]);
+  const nextLevelData = useMemo(() => getNextLevelData(state.level), [state.level]);
 
-  // Calculate daily reward info
-  const canClaimDailyRewardNow = canClaimDaily(state.lastDailyClaim);
-  const currentDailyReward = getDailyReward(state.dailyStreak);
-  const timeUntilNextDaily = getTimeUntilNextDaily(state.lastDailyClaim);
+  const xpToNextLevel = useMemo(
+    () => (nextLevelData ? nextLevelData.xpRequired - state.xp : 0),
+    [nextLevelData, state.xp]
+  );
 
-  return {
-    // State
+  const levelProgress = useMemo(() => {
+    if (!nextLevelData) return 100;
+    const progress = ((state.xp - levelData.xpRequired) / (nextLevelData.xpRequired - levelData.xpRequired)) * 100;
+    return Math.min(Math.max(progress, 0), 100);
+  }, [state.xp, levelData, nextLevelData]);
+
+  const canClaimDailyReward = useMemo(
+    () => canClaimDaily(state.lastDailyClaim),
+    [state.lastDailyClaim]
+  );
+
+  const currentDailyReward = useMemo(
+    () => getDailyReward(state.dailyStreak),
+    [state.dailyStreak]
+  );
+
+  const timeUntilNextDaily = useMemo(
+    () => getTimeUntilNextDaily(state.lastDailyClaim),
+    [state.lastDailyClaim]
+  );
+
+  // Memoize the entire return object to prevent unnecessary context updates
+  return useMemo(() => ({
     ...state,
     isLoaded,
     isLoading,
     error,
     offlineEarnings,
-
-    // Level info
     levelData,
     nextLevelData,
     xpToNextLevel,
-    levelProgress: Math.min(Math.max(levelProgress, 0), 100),
-
-    // Daily rewards
-    canClaimDailyReward: canClaimDailyRewardNow,
+    levelProgress,
+    canClaimDailyReward,
     currentDailyReward,
     timeUntilNextDaily,
     allDailyRewards: DAILY_REWARDS,
-
-    // Actions
     tap,
     purchaseUpgrade,
     completeTask,
     addReferral,
     claimDailyReward,
     save,
-
-    // Helpers
     getUpgradeLevel,
     isTaskCompleted,
     getTaskProgress,
-  };
+  }), [
+    state,
+    isLoaded,
+    isLoading,
+    error,
+    offlineEarnings,
+    levelData,
+    nextLevelData,
+    xpToNextLevel,
+    levelProgress,
+    canClaimDailyReward,
+    currentDailyReward,
+    timeUntilNextDaily,
+    tap,
+    purchaseUpgrade,
+    completeTask,
+    addReferral,
+    claimDailyReward,
+    save,
+    getUpgradeLevel,
+    isTaskCompleted,
+    getTaskProgress,
+  ]);
 }

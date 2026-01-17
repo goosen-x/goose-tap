@@ -2,8 +2,9 @@
 
 import { useGame } from '@/components/GameProvider';
 import { UpgradeCard } from '@/components/UpgradeCard';
-import { UPGRADES } from '@/types/game';
+import { UPGRADES, calculateUpgradeCost } from '@/types/game';
 import { useTelegram } from '@/hooks/useTelegram';
+import { toast } from 'sonner';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -41,6 +42,26 @@ export default function EarnPage() {
   };
 
   const handlePurchase = (upgradeId: string) => {
+    const upgrade = UPGRADES.find((u) => u.id === upgradeId);
+    if (!upgrade) return;
+
+    const level = getUpgradeLevel(upgradeId);
+    const cost = calculateUpgradeCost(upgrade, level);
+
+    // Check if at max level
+    if (level >= upgrade.maxLevel) {
+      toast.error('Already at max level');
+      hapticNotification('error');
+      return;
+    }
+
+    // Check if can afford
+    if (coins < cost) {
+      toast.error('Not enough coins');
+      hapticNotification('error');
+      return;
+    }
+
     const success = purchaseUpgrade(upgradeId);
     if (success) {
       hapticNotification('success');

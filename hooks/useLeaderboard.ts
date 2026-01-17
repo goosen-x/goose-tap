@@ -25,11 +25,19 @@ export function useLeaderboard(initData: string | null): UseLeaderboardResult {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const offsetRef = useRef(0);
+  const loadedRef = useRef(false);
+  const initDataRef = useRef(initData);
+
+  // Keep ref in sync
+  useEffect(() => {
+    initDataRef.current = initData;
+  }, [initData]);
 
   const fetchPage = useCallback(async (offset: number, isRefresh: boolean) => {
-    console.log('[Leaderboard] fetchPage called, initData:', initData ? 'present' : 'empty');
-    if (!initData) {
+    const currentInitData = initDataRef.current;
+    if (!currentInitData) {
       setIsLoading(false);
       return;
     }
@@ -43,7 +51,7 @@ export function useLeaderboard(initData: string | null): UseLeaderboardResult {
 
     try {
       const params = new URLSearchParams();
-      params.set('initData', initData);
+      params.set('initData', currentInitData);
       params.set('limit', String(PAGE_SIZE));
       params.set('offset', String(offset));
 
@@ -54,7 +62,6 @@ export function useLeaderboard(initData: string | null): UseLeaderboardResult {
       }
 
       const result: LeaderboardResponse = await response.json();
-      console.log('[Leaderboard] API result:', result.leaderboard.length, 'entries');
 
       if (isRefresh) {
         setEntries(result.leaderboard);
@@ -73,7 +80,7 @@ export function useLeaderboard(initData: string | null): UseLeaderboardResult {
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  }, [initData]);
+  }, []);
 
   const refresh = useCallback(async () => {
     offsetRef.current = 0;
@@ -85,9 +92,17 @@ export function useLeaderboard(initData: string | null): UseLeaderboardResult {
     await fetchPage(offsetRef.current, false);
   }, [fetchPage, isLoadingMore, hasMore]);
 
+  // Initial load - only once
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    if (loadedRef.current) return;
+    if (!initData) {
+      setIsLoading(false);
+      return;
+    }
+
+    loadedRef.current = true;
+    fetchPage(0, true);
+  }, [initData, fetchPage]);
 
   return {
     entries,

@@ -1,7 +1,6 @@
 'use client';
 
 import { Referral } from '@/types/game';
-import { formatNumber } from '@/lib/storage';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SlidingNumber } from '@/components/ui/sliding-number';
