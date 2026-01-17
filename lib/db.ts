@@ -7,6 +7,7 @@ export interface DbUser {
   telegram_id: number;
   username: string | null;
   first_name: string | null;
+  photo_url: string | null;
   coins: number;
   xp: number;
   energy: number;
@@ -51,7 +52,8 @@ export function dbRowToGameState(row: DbUser): GameState {
 export async function getOrCreateUser(
   telegramId: number,
   username?: string,
-  firstName?: string
+  firstName?: string,
+  photoUrl?: string
 ): Promise<DbUser> {
   // Try to find existing user
   const { rows } = await sql<DbUser>`
@@ -59,13 +61,27 @@ export async function getOrCreateUser(
   `;
 
   if (rows.length > 0) {
-    return rows[0];
+    // Update user info if changed
+    const user = rows[0];
+    if (user.username !== username || user.first_name !== firstName || user.photo_url !== photoUrl) {
+      const { rows: updatedRows } = await sql<DbUser>`
+        UPDATE users SET
+          username = ${username ?? null},
+          first_name = ${firstName ?? null},
+          photo_url = ${photoUrl ?? null},
+          updated_at = NOW()
+        WHERE telegram_id = ${telegramId}
+        RETURNING *
+      `;
+      return updatedRows[0];
+    }
+    return user;
   }
 
   // Create new user
   const { rows: newRows } = await sql<DbUser>`
-    INSERT INTO users (telegram_id, username, first_name)
-    VALUES (${telegramId}, ${username ?? null}, ${firstName ?? null})
+    INSERT INTO users (telegram_id, username, first_name, photo_url)
+    VALUES (${telegramId}, ${username ?? null}, ${firstName ?? null}, ${photoUrl ?? null})
     RETURNING *
   `;
 

@@ -30,7 +30,8 @@ export async function POST(request: Request) {
     const dbUser = await getOrCreateUser(
       user.id,
       user.username,
-      user.first_name
+      user.first_name,
+      user.photo_url
     );
 
     // Convert to GameState

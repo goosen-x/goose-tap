@@ -1,3 +1,25 @@
+// Leaderboard types
+export interface LeaderboardEntry {
+  rank: number;
+  telegramId: number;
+  firstName: string;
+  username: string | null;
+  photoUrl: string | null;
+  coins: number;
+  level: number;
+}
+
+export interface LeaderboardResponse {
+  leaderboard: LeaderboardEntry[];
+  currentUser: {
+    rank: number;
+    coins: number;
+    level: number;
+  } | null;
+  totalPlayers: number;
+  hasMore: boolean;
+}
+
 // Upgrade types
 export type BonusType = 'tap' | 'hour' | 'energy';
 
