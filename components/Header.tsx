@@ -3,19 +3,25 @@
 import { useTelegram } from '@/hooks/useTelegram';
 import { useGame } from '@/components/GameProvider';
 import { Badge } from '@/components/ui/badge';
-import { Coins, User } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Coins } from 'lucide-react';
 
 export function Header() {
   const { user } = useTelegram();
   const { coins, coinsPerHour, level, isLoaded } = useGame();
 
+  // Get initials for avatar fallback
+  const initials = user?.first_name
+    ? user.first_name.slice(0, 2).toUpperCase()
+    : 'P';
+
   if (!isLoaded) {
     return (
       <header className="flex items-center justify-between border-b bg-background px-4 py-2">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary">
-            <User className="h-4 w-4" />
-          </div>
+          <Avatar className="h-8 w-8">
+            <AvatarFallback>{initials}</AvatarFallback>
+          </Avatar>
           <div className="h-4 w-20 animate-pulse rounded bg-secondary" />
         </div>
         <div className="h-6 w-16 animate-pulse rounded bg-secondary" />
@@ -26,9 +32,12 @@ export function Header() {
   return (
     <header className="flex items-center justify-between border-b bg-background px-4 py-2">
       <div className="flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary">
-          <User className="h-4 w-4" />
-        </div>
+        <Avatar className="h-8 w-8">
+          {user?.photo_url && (
+            <AvatarImage src={user.photo_url} alt={user.first_name || 'User'} />
+          )}
+          <AvatarFallback>{initials}</AvatarFallback>
+        </Avatar>
         <div>
           <p className="text-sm font-medium leading-tight">
             {user?.first_name || 'Player'}
