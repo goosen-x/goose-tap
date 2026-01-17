@@ -28,6 +28,7 @@ import {
   saveGameState,
 } from '@/lib/storage';
 import { gameAPI } from './useGameAPI';
+import { useSyncOnFocus } from './useSyncOnFocus';
 
 export interface UseGameStateOptions {
   initData: string;
@@ -59,6 +60,7 @@ export interface UseGameStateResult {
   allDailyRewards: DailyReward[];
   isLoaded: boolean;
   isLoading: boolean;
+  isSyncing: boolean;
   error: string | null;
   offlineEarnings: number;
   offlineMinutes: number;
@@ -239,6 +241,27 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     };
   }, []);
 
+  // Sync on focus - merge server state with local state
+  const handleSyncFromServer = useCallback((serverState: GameState) => {
+    setState(prev => {
+      // Merge strategy: take max for coins/xp (don't lose progress), server for energy
+      const mergedState = {
+        ...serverState,
+        coins: Math.max(prev.coins, serverState.coins),
+        xp: Math.max(prev.xp, serverState.xp),
+      };
+      saveGameState(mergedState);
+      return mergedState;
+    });
+  }, []);
+
+  const { isSyncing } = useSyncOnFocus({
+    initData,
+    onSync: handleSyncFromServer,
+    debounceMs: 2000,
+    enabled: isLoaded,
+  });
+
   // Tap handler
   const tap = useCallback(() => {
     const now = Date.now();
@@ -283,7 +306,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     }
   }, [recalculateStats]);
 
-  // Flush taps on visibility change
+  // Flush taps and save state on visibility change
   useEffect(() => {
     const flush = () => {
       if (tapBatchRef.current > 0 && initDataRef.current) {
@@ -294,7 +317,20 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     };
 
     const handleVisibility = () => {
-      if (document.visibilityState === 'hidden') flush();
+      if (document.visibilityState === 'hidden') {
+        flush();
+        // sendBeacon for reliable save on close/hide
+        if (initDataRef.current) {
+          const blob = new Blob(
+            [JSON.stringify({
+              initData: initDataRef.current,
+              state: stateRef.current,
+            })],
+            { type: 'application/json' }
+          );
+          navigator.sendBeacon('/api/game/save', blob);
+        }
+      }
     };
 
     document.addEventListener('visibilitychange', handleVisibility);
@@ -541,6 +577,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     ...state,
     isLoaded,
     isLoading,
+    isSyncing,
     error,
     offlineEarnings,
     offlineMinutes,
@@ -565,6 +602,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     state,
     isLoaded,
     isLoading,
+    isSyncing,
     error,
     offlineEarnings,
     offlineMinutes,

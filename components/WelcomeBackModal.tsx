@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { SlidingNumber } from '@/components/ui/sliding-number';
+import { Coins } from 'lucide-react';
 import Image from 'next/image';
 
 interface WelcomeBackModalProps {
@@ -50,11 +51,10 @@ export function WelcomeBackModal({ earnings, offlineMinutes, coinsPerHour }: Wel
           {/* Goose icon */}
           <div className="mb-2 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
             <Image
-              src="/goose.svg"
+              src="/goose.png"
               alt="Goose"
               width={56}
               height={56}
-              className="animate-bounce"
             />
           </div>
 
@@ -72,12 +72,7 @@ export function WelcomeBackModal({ earnings, offlineMinutes, coinsPerHour }: Wel
               <div className="flex items-center justify-center gap-2 text-3xl font-bold text-foreground">
                 <span>+</span>
                 <SlidingNumber value={displayEarnings} />
-                <Image
-                  src="/coin.svg"
-                  alt="coins"
-                  width={28}
-                  height={28}
-                />
+                <Coins className="h-7 w-7 text-yellow-500" />
               </div>
 
               {/* Passive income info */}
