@@ -57,10 +57,10 @@ export function validateInitData(initData: string): ValidationResult {
       .map(([key, value]) => `${key}=${value}`)
       .join('\n');
 
-    // Calculate secret_key = HMAC-SHA256("WebAppData", BOT_TOKEN)
+    // Calculate secret_key = HMAC-SHA256(BOT_TOKEN, "WebAppData")
     const secretKey = crypto
-      .createHmac('sha256', 'WebAppData')
-      .update(botToken)
+      .createHmac('sha256', botToken)
+      .update('WebAppData')
       .digest();
 
     // Calculate hash = HMAC-SHA256(data_check_string, secret_key)
