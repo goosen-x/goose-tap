@@ -7,8 +7,7 @@ import { formatNumber } from '@/lib/storage';
 import { useTelegram } from '@/hooks/useTelegram';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Coins, Layers, Rocket } from 'lucide-react';
+import { Layers, Rocket } from 'lucide-react';
 
 type TabType = 'cards' | 'boosts';
 
@@ -29,35 +28,24 @@ export default function EarnPage() {
 
   return (
     <div className="flex flex-1 flex-col bg-background">
-      {/* Header */}
-      <header className="border-b p-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Earn</h1>
-          <Badge variant="secondary" className="text-base px-3 py-1">
-            <Coins className="h-4 w-4 mr-1" />
-            {formatNumber(coins)}
-          </Badge>
-        </div>
-
-        {/* Stats */}
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          <Card className="p-3 text-center">
-            <p className="text-xs text-muted-foreground">Per tap</p>
-            <p className="text-lg font-semibold">+{coinsPerTap}</p>
-          </Card>
-          <Card className="p-3 text-center">
-            <p className="text-xs text-muted-foreground">Per hour</p>
-            <p className="text-lg font-semibold">+{formatNumber(coinsPerHour)}</p>
-          </Card>
-          <Card className="p-3 text-center">
-            <p className="text-xs text-muted-foreground">Max energy</p>
-            <p className="text-lg font-semibold">{formatNumber(maxEnergy)}</p>
-          </Card>
-        </div>
-      </header>
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-2 p-4 pb-2">
+        <Card className="p-2 text-center">
+          <p className="text-[10px] text-muted-foreground">Per tap</p>
+          <p className="text-sm font-semibold">+{coinsPerTap}</p>
+        </Card>
+        <Card className="p-2 text-center">
+          <p className="text-[10px] text-muted-foreground">Per hour</p>
+          <p className="text-sm font-semibold">+{formatNumber(coinsPerHour)}</p>
+        </Card>
+        <Card className="p-2 text-center">
+          <p className="text-[10px] text-muted-foreground">Max energy</p>
+          <p className="text-sm font-semibold">{formatNumber(maxEnergy)}</p>
+        </Card>
+      </div>
 
       {/* Tabs and content */}
-      <Tabs defaultValue="cards" className="flex flex-1 flex-col p-4">
+      <Tabs defaultValue="cards" className="flex flex-1 flex-col px-4 pb-4">
         <TabsList className="w-full">
           <TabsTrigger value="cards" className="flex-1 cursor-pointer">
             <Layers className="h-4 w-4 mr-1" />

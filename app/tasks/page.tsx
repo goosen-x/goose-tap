@@ -3,16 +3,14 @@
 import { useGame } from '@/components/GameProvider';
 import { TaskCard } from '@/components/TaskCard';
 import { TASKS } from '@/types/game';
-import { formatNumber } from '@/lib/storage';
 import { useTelegram } from '@/hooks/useTelegram';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Coins, ListTodo, Calendar, Share2 } from 'lucide-react';
+import { ListTodo, Calendar, Share2 } from 'lucide-react';
 
 type FilterType = 'all' | 'daily' | 'social';
 
 export default function TasksPage() {
-  const { coins, completeTask, isTaskCompleted, getTaskProgress } = useGame();
+  const { completeTask, isTaskCompleted, getTaskProgress } = useGame();
   const { webApp } = useTelegram();
 
   const handleAction = (action?: string) => {
@@ -35,17 +33,6 @@ export default function TasksPage() {
 
   return (
     <div className="flex flex-1 flex-col bg-background">
-      {/* Header */}
-      <header className="border-b p-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Tasks</h1>
-          <Badge variant="secondary" className="text-base px-3 py-1">
-            <Coins className="h-4 w-4 mr-1" />
-            {formatNumber(coins)}
-          </Badge>
-        </div>
-      </header>
-
       {/* Tabs and content */}
       <Tabs defaultValue="all" className="flex flex-1 flex-col p-4">
         <TabsList className="w-full">

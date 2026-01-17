@@ -3,11 +3,9 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTelegram } from '@/hooks/useTelegram';
 import { useGame } from '@/components/GameProvider';
-import { formatNumber } from '@/lib/storage';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Coins, Zap, User } from 'lucide-react';
+import { Coins, Zap } from 'lucide-react';
 
 interface TapEffect {
   id: number;
@@ -17,8 +15,8 @@ interface TapEffect {
 }
 
 export default function Home() {
-  const { user, webApp } = useTelegram();
-  const { coins, energy, maxEnergy, coinsPerTap, coinsPerHour, level, tap, isLoaded } = useGame();
+  const { webApp } = useTelegram();
+  const { energy, maxEnergy, coinsPerTap, tap, isLoaded } = useGame();
   const [tapEffects, setTapEffects] = useState<TapEffect[]>([]);
   const [isPressed, setIsPressed] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -85,32 +83,6 @@ export default function Home() {
 
   return (
     <div className="flex flex-1 flex-col bg-background">
-      {/* Header */}
-      <header className="flex items-center justify-between border-b p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
-            <User className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="font-medium">
-              {user?.first_name || 'Player'}
-            </p>
-            <p className="text-sm text-muted-foreground">Level {level}</p>
-          </div>
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          <Badge variant="secondary" className="text-base px-3 py-1">
-            <Coins className="h-4 w-4 mr-1" />
-            {formatNumber(coins)}
-          </Badge>
-          {coinsPerHour > 0 && (
-            <p className="text-xs text-muted-foreground">
-              +{formatNumber(coinsPerHour)}/hr
-            </p>
-          )}
-        </div>
-      </header>
-
       {/* Main tap area */}
       <main className="flex flex-1 flex-col items-center justify-center p-4">
         <div

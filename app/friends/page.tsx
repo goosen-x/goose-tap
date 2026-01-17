@@ -6,14 +6,13 @@ import { formatNumber } from '@/lib/storage';
 import { useTelegram } from '@/hooks/useTelegram';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Coins, Users, Gift, Gem, Copy, UserPlus } from 'lucide-react';
+import { Users, Gift, Gem, Copy, UserPlus } from 'lucide-react';
 
 const REFERRAL_BONUS = 10000;
 const EARNINGS_PERCENTAGE = 10;
 
 export default function FriendsPage() {
-  const { coins, referrals } = useGame();
+  const { referrals } = useGame();
   const { webApp, user } = useTelegram();
 
   const totalEarned = referrals.length * REFERRAL_BONUS;
@@ -44,17 +43,6 @@ export default function FriendsPage() {
 
   return (
     <div className="flex flex-1 flex-col bg-background">
-      {/* Header */}
-      <header className="border-b p-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Friends</h1>
-          <Badge variant="secondary" className="text-base px-3 py-1">
-            <Coins className="h-4 w-4 mr-1" />
-            {formatNumber(coins)}
-          </Badge>
-        </div>
-      </header>
-
       {/* Referral info */}
       <div className="p-4">
         <Card className="p-4">
