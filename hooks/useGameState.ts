@@ -61,6 +61,7 @@ export interface UseGameStateResult {
   isLoading: boolean;
   error: string | null;
   offlineEarnings: number;
+  offlineMinutes: number;
   tap: () => void;
   purchaseUpgrade: (upgradeId: string) => boolean;
   completeTask: (taskId: string) => boolean;
@@ -88,6 +89,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [offlineEarnings, setOfflineEarnings] = useState(0);
+  const [offlineMinutes, setOfflineMinutes] = useState(0);
 
   // Refs (don't cause re-renders)
   const stateRef = useRef(state);
@@ -127,6 +129,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
         setState(response.state);
         saveGameState(response.state);
         setOfflineEarnings(response.offlineEarnings);
+        setOfflineMinutes(response.offlineMinutes);
         setIsLoading(false);
         setIsLoaded(true);
       })
@@ -540,6 +543,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     isLoading,
     error,
     offlineEarnings,
+    offlineMinutes,
     levelData,
     nextLevelData,
     xpToNextLevel,
@@ -563,6 +567,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     isLoading,
     error,
     offlineEarnings,
+    offlineMinutes,
     levelData,
     nextLevelData,
     xpToNextLevel,

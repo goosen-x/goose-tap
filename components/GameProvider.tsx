@@ -1,10 +1,10 @@
 'use client';
 
-import { createContext, useContext, ReactNode, useEffect, useRef } from 'react';
+import { createContext, useContext, ReactNode } from 'react';
 import { useGameState, UseGameStateResult } from '@/hooks/useGameState';
 import { useTelegram } from '@/hooks/useTelegram';
 import { Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { WelcomeBackModal } from '@/components/WelcomeBackModal';
 
 type GameContextType = UseGameStateResult;
 
@@ -17,15 +17,6 @@ interface GameProviderProps {
 export function GameProvider({ children }: GameProviderProps) {
   const { initData, isReady: isTelegramReady } = useTelegram();
   const gameState = useGameState({ initData });
-  const shownOfflineEarnings = useRef(false);
-
-  // Show offline earnings notification via sonner
-  useEffect(() => {
-    if (gameState.offlineEarnings > 0 && gameState.isLoaded && !shownOfflineEarnings.current) {
-      shownOfflineEarnings.current = true;
-      toast.success(`+${gameState.offlineEarnings.toLocaleString()} offline earnings!`);
-    }
-  }, [gameState.offlineEarnings, gameState.isLoaded]);
 
   // Show loading state while Telegram SDK initializes
   if (!isTelegramReady) {
@@ -54,6 +45,11 @@ export function GameProvider({ children }: GameProviderProps) {
   return (
     <GameContext.Provider value={gameState}>
       {children}
+      <WelcomeBackModal
+        earnings={gameState.offlineEarnings}
+        offlineMinutes={gameState.offlineMinutes}
+        coinsPerHour={gameState.coinsPerHour}
+      />
     </GameContext.Provider>
   );
 }

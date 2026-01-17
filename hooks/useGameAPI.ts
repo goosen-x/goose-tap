@@ -6,6 +6,7 @@ export interface LoadGameResponse {
   success: boolean;
   state: GameState;
   offlineEarnings: number;
+  offlineMinutes: number;
   user: {
     id: number;
     username?: string;

@@ -59,7 +59,9 @@ export async function POST(request: Request) {
     // Convert to GameState
     let state = dbRowToGameState(dbUser);
 
-    // Calculate offline earnings
+    // Calculate offline time and earnings
+    const offlineMs = Date.now() - state.lastOfflineEarnings;
+    const offlineMinutes = Math.floor(offlineMs / (1000 * 60));
     const offlineEarnings = calculateOfflineEarnings(
       state.lastOfflineEarnings,
       state.coinsPerHour
@@ -85,6 +87,7 @@ export async function POST(request: Request) {
       success: true,
       state,
       offlineEarnings,
+      offlineMinutes,
       user: {
         id: user.id,
         username: user.username,
