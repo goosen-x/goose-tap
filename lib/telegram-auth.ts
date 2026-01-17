@@ -70,6 +70,13 @@ export function validateInitData(initData: string): ValidationResult {
       .digest('hex');
 
     if (calculatedHash !== hash) {
+      console.error('[Auth] Hash mismatch:', {
+        provided: hash?.slice(0, 16) + '...',
+        calculated: calculatedHash?.slice(0, 16) + '...',
+        paramsCount: Array.from(params.entries()).length,
+        hasUser: !!params.get('user'),
+        hasAuthDate: !!params.get('auth_date'),
+      });
       return { valid: false, error: 'Invalid hash' };
     }
 
