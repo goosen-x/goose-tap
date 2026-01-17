@@ -23,7 +23,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const validation = validateInitDataWithDevFallback(initData);
+    const validation = await validateInitDataWithDevFallback(initData);
     if (!validation.valid || !validation.user) {
       return NextResponse.json(
         { error: validation.error || 'Invalid initData' },
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const validation = validateInitDataWithDevFallback(initData);
+    const validation = await validateInitDataWithDevFallback(initData);
     if (!validation.valid || !validation.user) {
       return NextResponse.json(
         { error: validation.error || 'Invalid initData' },

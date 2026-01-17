@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     }
 
     // Validate Telegram initData
-    const validation = validateInitDataWithDevFallback(initData);
+    const validation = await validateInitDataWithDevFallback(initData);
     if (!validation.valid || !validation.user) {
       return NextResponse.json(
         { error: validation.error || 'Invalid initData' },

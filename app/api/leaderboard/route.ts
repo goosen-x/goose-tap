@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     // Validate initData if provided
     let currentTelegramId: number | null = null;
     if (initData) {
-      const validation = validateInitDataWithDevFallback(initData);
+      const validation = await validateInitDataWithDevFallback(initData);
       if (validation.valid && validation.user) {
         currentTelegramId = validation.user.id;
       }

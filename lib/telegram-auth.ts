@@ -1,12 +1,4 @@
-import crypto from 'crypto';
-
-// Telegram's Ed25519 public keys for signature verification
-const TELEGRAM_PUBLIC_KEYS = {
-  // Production environment
-  production: Buffer.from('e7bf03a2fa4602af4580703d88dda5bb59f32ed8b02a56c187fe7d34caed242d', 'hex'),
-  // Test environment
-  test: Buffer.from('40055058a4ee38156a06562e52eece92a771bcd8346a8c4615cb7376eddf72ec', 'hex'),
-};
+import { validate, validate3rd } from '@tma.js/init-data-node';
 
 export interface TelegramUser {
   id: number;
@@ -28,10 +20,10 @@ export interface ValidationResult {
 /**
  * Validates Telegram Mini App initData
  * Supports both:
- * - Ed25519 signature (new method, uses Telegram's public key)
- * - HMAC-SHA256 hash (legacy method, uses bot token)
+ * - Ed25519 signature (new method, uses Telegram's public key via validate3rd)
+ * - HMAC-SHA256 hash (legacy method, uses bot token via validate)
  */
-export function validateInitData(initData: string): ValidationResult {
+export async function validateInitData(initData: string): Promise<ValidationResult> {
   if (!initData || initData.trim() === '') {
     return { valid: false, error: 'Empty initData' };
   }
@@ -43,9 +35,9 @@ export function validateInitData(initData: string): ValidationResult {
 
     // Determine which validation method to use
     if (signature) {
-      return validateWithSignature(params, signature);
+      return await validateWithSignature(initData);
     } else if (hash) {
-      return validateWithHash(params, hash);
+      return validateWithHash(initData);
     } else {
       return { valid: false, error: 'No signature or hash in initData' };
     }
@@ -59,114 +51,68 @@ export function validateInitData(initData: string): ValidationResult {
 
 /**
  * Validate using Ed25519 signature (new Telegram method)
+ * Uses official @tma.js/init-data-node library
  */
-function validateWithSignature(params: URLSearchParams, signature: string): ValidationResult {
-  // Remove signature from params for verification
-  params.delete('signature');
-
-  // Sort parameters alphabetically and create data_check_string
-  const sortedParams = Array.from(params.entries())
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([key, value]) => `${key}=${value}`)
-    .join('\n');
-
-  // Convert base64url signature to buffer
-  const signatureBuffer = Buffer.from(
-    signature.replace(/-/g, '+').replace(/_/g, '/'),
-    'base64'
-  );
-
-  // Try production key first, then test key
-  const publicKeys = [TELEGRAM_PUBLIC_KEYS.production, TELEGRAM_PUBLIC_KEYS.test];
-  let isValid = false;
-
-  for (const publicKey of publicKeys) {
-    try {
-      const keyObject = crypto.createPublicKey({
-        key: Buffer.concat([
-          // Ed25519 public key ASN.1 prefix
-          Buffer.from('302a300506032b6570032100', 'hex'),
-          publicKey,
-        ]),
-        format: 'der',
-        type: 'spki',
-      });
-
-      isValid = crypto.verify(
-        null,
-        Buffer.from(sortedParams),
-        keyObject,
-        signatureBuffer
-      );
-
-      if (isValid) break;
-    } catch {
-      continue;
-    }
-  }
-
-  if (!isValid) {
-    console.error('[Auth] Signature verification failed');
-    return { valid: false, error: 'Invalid signature' };
-  }
-
-  return extractUserFromParams(params);
-}
-
-/**
- * Validate using HMAC-SHA256 hash (legacy method)
- */
-function validateWithHash(params: URLSearchParams, hash: string): ValidationResult {
+async function validateWithSignature(initData: string): Promise<ValidationResult> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
 
   if (!botToken) {
     return { valid: false, error: 'Bot token not configured' };
   }
 
-  // Remove hash from params for verification
-  params.delete('hash');
+  // Extract bot ID from token (format: BOT_ID:SECRET)
+  const botId = parseInt(botToken.split(':')[0], 10);
 
-  // Sort parameters alphabetically and create data_check_string
-  const sortedParams = Array.from(params.entries())
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([key, value]) => `${key}=${value}`)
-    .join('\n');
+  try {
+    // Try production environment first, then test
+    for (const isTest of [false, true]) {
+      try {
+        await validate3rd(initData, botId, {
+          expiresIn: 6 * 60 * 60, // 6 hours
+          test: isTest,
+        });
+        // Validation passed
+        return extractUserFromInitData(initData);
+      } catch {
+        continue;
+      }
+    }
 
-  // Calculate secret_key = HMAC-SHA256(BOT_TOKEN, "WebAppData")
-  const secretKey = crypto
-    .createHmac('sha256', botToken)
-    .update('WebAppData')
-    .digest();
-
-  // Calculate hash = HMAC-SHA256(data_check_string, secret_key)
-  const calculatedHash = crypto
-    .createHmac('sha256', secretKey)
-    .update(sortedParams)
-    .digest('hex');
-
-  if (calculatedHash !== hash) {
-    console.error('[Auth] Hash mismatch');
-    return { valid: false, error: 'Invalid hash' };
+    console.error('[Auth] Signature verification failed for both environments');
+    return { valid: false, error: 'Invalid signature' };
+  } catch (error) {
+    console.error('[Auth] Signature validation error:', error);
+    return { valid: false, error: 'Signature validation failed' };
   }
-
-  return extractUserFromParams(params);
 }
 
 /**
- * Extract and validate user from params after signature/hash verification
+ * Validate using HMAC-SHA256 hash (legacy method)
  */
-function extractUserFromParams(params: URLSearchParams): ValidationResult {
-  // Check auth_date is not too old (6 hours max)
-  const authDate = params.get('auth_date');
-  if (authDate) {
-    const authTimestamp = parseInt(authDate, 10) * 1000;
-    const now = Date.now();
-    const maxAge = 6 * 60 * 60 * 1000; // 6 hours in ms
+function validateWithHash(initData: string): ValidationResult {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
 
-    if (now - authTimestamp > maxAge) {
-      return { valid: false, error: 'initData expired' };
-    }
+  if (!botToken) {
+    return { valid: false, error: 'Bot token not configured' };
   }
+
+  try {
+    validate(initData, botToken, {
+      expiresIn: 6 * 60 * 60, // 6 hours
+    });
+    // Validation passed
+    return extractUserFromInitData(initData);
+  } catch (error) {
+    console.error('[Auth] Hash validation failed:', error);
+    return { valid: false, error: 'Invalid hash' };
+  }
+}
+
+/**
+ * Extract and validate user from initData after signature/hash verification
+ */
+function extractUserFromInitData(initData: string): ValidationResult {
+  const params = new URLSearchParams(initData);
 
   // Extract user data
   const userJson = params.get('user');
@@ -208,9 +154,9 @@ export function isDevelopment(): boolean {
  * Validate initData with development mode fallback
  * In development, allows mock users for testing
  */
-export function validateInitDataWithDevFallback(initData: string): ValidationResult {
+export async function validateInitDataWithDevFallback(initData: string): Promise<ValidationResult> {
   // First try real validation
-  const result = validateInitData(initData);
+  const result = await validateInitData(initData);
 
   if (result.valid) {
     return result;
