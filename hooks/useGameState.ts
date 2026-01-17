@@ -158,6 +158,11 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
 
         const response = await gameAPI.loadGame(initData);
 
+        console.log('[GameState] Loaded from API:', { coins: response.state.coins, level: response.state.level });
+        toast.success('Synced with server', {
+          description: `Coins: ${response.state.coins}, Level: ${response.state.level}`,
+        });
+
         setState(response.state);
         setOfflineEarnings(response.offlineEarnings);
         saveGameState(response.state); // Cache in localStorage
@@ -168,6 +173,11 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
         setError(errorMessage);
         toast.error('Failed to sync with server', {
           description: errorMessage,
+        });
+        // Show what we loaded from localStorage as fallback
+        const localState = loadGameState();
+        toast.info('Using local data', {
+          description: `Coins: ${localState.coins}, Level: ${localState.level}`,
         });
       } finally {
         setIsLoading(false);

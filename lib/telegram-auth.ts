@@ -56,24 +56,31 @@ export async function validateInitData(initData: string): Promise<ValidationResu
 async function validateWithSignature(initData: string): Promise<ValidationResult> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
 
+  console.log('[Auth] validateWithSignature called');
+
   if (!botToken) {
+    console.error('[Auth] Bot token not configured');
     return { valid: false, error: 'Bot token not configured' };
   }
 
   // Extract bot ID from token (format: BOT_ID:SECRET)
   const botId = parseInt(botToken.split(':')[0], 10);
+  console.log('[Auth] Bot ID:', botId);
 
   try {
     // Try production environment first, then test
     for (const isTest of [false, true]) {
       try {
+        console.log('[Auth] Trying validate3rd with test:', isTest);
         await validate3rd(initData, botId, {
           expiresIn: 6 * 60 * 60, // 6 hours
           test: isTest,
         });
         // Validation passed
+        console.log('[Auth] validate3rd SUCCESS with test:', isTest);
         return extractUserFromInitData(initData);
-      } catch {
+      } catch (e) {
+        console.log('[Auth] validate3rd failed for test:', isTest, 'error:', e instanceof Error ? e.message : e);
         continue;
       }
     }

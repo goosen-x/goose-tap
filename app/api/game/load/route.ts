@@ -8,7 +8,10 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { initData } = body;
 
+    console.log('[Load] Request received');
+
     if (!initData) {
+      console.log('[Load] Missing initData');
       return NextResponse.json(
         { error: 'Missing initData' },
         { status: 400 }
@@ -16,7 +19,10 @@ export async function POST(request: Request) {
     }
 
     // Validate Telegram initData
+    console.log('[Load] Validating initData...');
     const validation = await validateInitDataWithDevFallback(initData);
+    console.log('[Load] Validation result:', { valid: validation.valid, error: validation.error, userId: validation.user?.id });
+
     if (!validation.valid || !validation.user) {
       return NextResponse.json(
         { error: validation.error || 'Invalid initData' },
@@ -27,12 +33,14 @@ export async function POST(request: Request) {
     const { user } = validation;
 
     // Get or create user in database
+    console.log('[Load] Getting user from DB, telegram_id:', user.id);
     const dbUser = await getOrCreateUser(
       user.id,
       user.username,
       user.first_name,
       user.photo_url
     );
+    console.log('[Load] DB user coins:', dbUser.coins, 'level:', dbUser.level);
 
     // Convert to GameState
     let state = dbRowToGameState(dbUser);
