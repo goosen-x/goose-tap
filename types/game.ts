@@ -51,6 +51,8 @@ export interface Task {
   title: string;
   description: string;
   reward: number;
+  /** XP reward for completing the task */
+  xpReward?: number;
   action?: string;
   requirement?: number;
   icon: string;
@@ -462,6 +464,7 @@ export const TASKS: Task[] = [
     title: 'Tap 100 times',
     description: 'Daily warm-up',
     reward: 500,
+    xpReward: 50,
     requirement: 100,
     icon: '🎯',
   },
@@ -471,6 +474,7 @@ export const TASKS: Task[] = [
     title: 'Tap 250 times',
     description: 'Getting started',
     reward: 1000,
+    xpReward: 100,
     requirement: 250,
     icon: '🎯',
     prerequisite: 'daily-tap-100',
@@ -481,6 +485,7 @@ export const TASKS: Task[] = [
     title: 'Tap 500 times',
     description: 'Casual player',
     reward: 1500,
+    xpReward: 150,
     requirement: 500,
     icon: '🎯',
     prerequisite: 'daily-tap-250',
@@ -491,6 +496,7 @@ export const TASKS: Task[] = [
     title: 'Tap 1,000 times',
     description: 'Active player',
     reward: 2500,
+    xpReward: 250,
     requirement: 1000,
     icon: '🎯',
     prerequisite: 'daily-tap-500',
@@ -501,6 +507,7 @@ export const TASKS: Task[] = [
     title: 'Tap 2,500 times',
     description: 'Dedicated player',
     reward: 5000,
+    xpReward: 500,
     requirement: 2500,
     icon: '🎯',
     prerequisite: 'daily-tap-1000',
@@ -511,6 +518,7 @@ export const TASKS: Task[] = [
     title: 'Tap 5,000 times',
     description: 'Hardcore player',
     reward: 10000,
+    xpReward: 1000,
     requirement: 5000,
     icon: '🎯',
     prerequisite: 'daily-tap-2500',
@@ -521,6 +529,7 @@ export const TASKS: Task[] = [
     title: 'Tap 10,000 times',
     description: 'Ultra grinder',
     reward: 25000,
+    xpReward: 2500,
     requirement: 10000,
     icon: '🎯',
     prerequisite: 'daily-tap-5000',

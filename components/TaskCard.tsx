@@ -10,8 +10,9 @@ import { Progress } from '@/components/ui/progress';
 import { SlidingNumber } from '@/components/ui/sliding-number';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useTelegram } from '@/hooks/useTelegram';
-import { Check, Megaphone, Calendar, Users, Star, Target, ExternalLink, Zap, Trophy } from 'lucide-react';
+import { Check, Megaphone, Calendar, Users, Star, Target, ExternalLink, Zap, Trophy, Sparkles } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
+import { GooseIcon } from '@/components/ui/goose-icon';
 
 interface TaskCardProps {
   task: Task;
@@ -152,9 +153,20 @@ export function TaskCard({ task, isCompleted, progress, onComplete }: TaskCardPr
           <p className="text-sm text-muted-foreground">{task.description}</p>
         </div>
 
-        {/* Actions */}
+        {/* Rewards & Actions */}
         <div className="flex flex-col items-end gap-1.5 shrink-0">
-          <Badge variant="secondary">+<SlidingNumber value={task.reward} /></Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="flex items-center gap-1">
+              +<SlidingNumber value={task.reward} />
+              <GooseIcon className="h-3 w-3" />
+            </Badge>
+            {task.xpReward && (
+              <Badge variant="outline" className="flex items-center gap-1">
+                +<SlidingNumber value={task.xpReward} />
+                <Sparkles className="h-3 w-3" />
+              </Badge>
+            )}
+          </div>
           {renderAction()}
         </div>
       </div>
