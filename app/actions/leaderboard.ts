@@ -23,7 +23,7 @@ async function getCachedLeaderboardList(limit: number, offset: number) {
     first_name: string | null
     username: string | null
     photo_url: string | null
-    coins: number
+    total_earnings: number
     level: number
     rank: number
   }>`
@@ -33,11 +33,11 @@ async function getCachedLeaderboardList(limit: number, offset: number) {
         first_name,
         username,
         photo_url,
-        coins,
+        COALESCE(total_earnings, 0) as total_earnings,
         level,
-        ROW_NUMBER() OVER (ORDER BY coins DESC) as rank
+        ROW_NUMBER() OVER (ORDER BY COALESCE(total_earnings, 0) DESC) as rank
       FROM users
-      WHERE coins > 0 AND (${IS_DEV} OR telegram_id != ${DEV_USER_ID})
+      WHERE COALESCE(total_earnings, 0) > 0 AND (${IS_DEV} OR telegram_id != ${DEV_USER_ID})
     ) ranked
     ORDER BY rank
     LIMIT ${limit + 1}
@@ -57,7 +57,7 @@ async function getCachedTotalPlayers() {
 
   const { rows } = await sql<{ total: number }>`
     SELECT COUNT(*) as total FROM users
-    WHERE coins > 0 AND (${IS_DEV} OR telegram_id != ${DEV_USER_ID})
+    WHERE COALESCE(total_earnings, 0) > 0 AND (${IS_DEV} OR telegram_id != ${DEV_USER_ID})
   `
 
   return Number(rows[0]?.total || 0)
@@ -69,12 +69,12 @@ async function getCachedTotalPlayers() {
 async function getCurrentUserRank(telegramId: number) {
   const { rows } = await sql<{
     rank: number
-    coins: number
+    total_earnings: number
     level: number
   }>`
     SELECT
-      (SELECT COUNT(*) + 1 FROM users WHERE coins > u.coins AND (${IS_DEV} OR telegram_id != ${DEV_USER_ID})) as rank,
-      u.coins,
+      (SELECT COUNT(*) + 1 FROM users WHERE COALESCE(total_earnings, 0) > COALESCE(u.total_earnings, 0) AND (${IS_DEV} OR telegram_id != ${DEV_USER_ID})) as rank,
+      COALESCE(u.total_earnings, 0) as total_earnings,
       u.level
     FROM users u
     WHERE u.telegram_id = ${telegramId}
@@ -84,7 +84,7 @@ async function getCurrentUserRank(telegramId: number) {
 
   return {
     rank: Number(rows[0].rank),
-    coins: Number(rows[0].coins),
+    coins: Number(rows[0].total_earnings),
     level: rows[0].level,
   }
 }
@@ -114,14 +114,14 @@ export async function getLeaderboard(
   const hasMore = leaderboardRows.length > limit
   const results = hasMore ? leaderboardRows.slice(0, limit) : leaderboardRows
 
-  // Map to LeaderboardEntry
+  // Map to LeaderboardEntry (coins field shows totalEarnings for display)
   const leaderboard: LeaderboardEntry[] = results.map((row) => ({
     rank: Number(row.rank),
     telegramId: row.telegram_id,
     firstName: row.first_name || 'Anonymous',
     username: row.username,
     photoUrl: row.photo_url || null,
-    coins: Number(row.coins),
+    coins: Number(row.total_earnings),
     level: row.level,
   }))
 
