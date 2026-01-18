@@ -8,7 +8,6 @@ import { Progress } from '@/components/ui/progress';
 import { formatCompact } from '@/lib/storage';
 import { cn } from '@/lib/utils';
 import { Layers, Rocket, Star, Zap, Clock, Battery } from 'lucide-react';
-import { GooseIcon } from '@/components/ui/goose-icon';
 
 interface TabLink {
   href: string;
@@ -21,12 +20,12 @@ const TABS: TabLink[] = [
   { href: '/earn/boosts', label: 'Boosts', icon: <Rocket className="h-4 w-4" /> },
 ];
 
-function formatBonus(bonus: { coinsPerTap?: number; maxEnergy?: number; passiveIncomeMultiplier?: number }): string {
+function formatNextBonus(bonus: { coinsPerTap?: number; maxEnergy?: number; passiveIncomeMultiplier?: number }): string {
   const parts: string[] = [];
   if (bonus.coinsPerTap) parts.push(`+${bonus.coinsPerTap} tap`);
-  if (bonus.maxEnergy) parts.push(`+${bonus.maxEnergy} energy`);
-  if (bonus.passiveIncomeMultiplier) parts.push(`+${Math.round((bonus.passiveIncomeMultiplier - 1) * 100)}% passive`);
-  return parts.join(', ') || 'No bonus';
+  if (bonus.maxEnergy) parts.push(`+${bonus.maxEnergy}E`);
+  if (bonus.passiveIncomeMultiplier) parts.push(`+${Math.round((bonus.passiveIncomeMultiplier - 1) * 100)}%`);
+  return parts.join(' ') || '';
 }
 
 function EarnHeader() {
@@ -43,83 +42,63 @@ function EarnHeader() {
 
   if (!isLoaded) {
     return (
-      <div className="px-4 pt-4">
-        <Card className="p-4 mb-2">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <div className="h-10 w-10 rounded-full bg-secondary animate-pulse" />
-              <div>
-                <div className="h-4 w-16 bg-secondary rounded animate-pulse mb-1" />
-                <div className="h-3 w-12 bg-secondary rounded animate-pulse" />
-              </div>
-            </div>
-          </div>
-          <div className="h-2 w-full bg-secondary rounded animate-pulse" />
+      <div className="px-4 pt-4 pb-2">
+        <Card className="p-3">
+          <div className="h-4 w-full bg-secondary rounded animate-pulse mb-2" />
+          <div className="h-8 w-full bg-secondary rounded animate-pulse" />
         </Card>
-        <div className="grid grid-cols-3 gap-2 pb-2">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="p-2 h-16 animate-pulse bg-secondary/50" />
-          ))}
-        </div>
       </div>
     );
   }
 
   return (
-    <div className="px-4 pt-4">
-      {/* Level Progress */}
-      <Card className="p-4 mb-2">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
-              <Star className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="font-semibold">Level {levelData.level}</p>
-              <p className="text-xs text-muted-foreground">{levelData.title}</p>
-            </div>
+    <div className="px-4 pt-4 pb-2">
+      <Card className="p-3 space-y-2">
+        {/* Row 1: Level + Progress + XP + Next bonus */}
+        <div className="flex items-center gap-3 text-sm">
+          {/* Level */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Star className="w-4 h-4 text-yellow-500" />
+            <span className="font-medium">Lvl {levelData.level}</span>
+            <span className="text-muted-foreground">·</span>
+            <span className="text-muted-foreground text-xs">{levelData.title}</span>
           </div>
-          <div className="text-right">
-            <span className="text-sm font-medium flex items-center justify-end gap-1">{formatCompact(xp)} XP</span>
-            {nextLevelData && (
-              <span className="text-xs text-muted-foreground flex items-center justify-end gap-1">
-                {formatCompact(nextLevelData.xpRequired)} next
-              </span>
-            )}
+
+          {/* Progress */}
+          <Progress value={levelProgress} className="h-1.5 flex-1" />
+
+          {/* XP */}
+          <span className="text-xs text-muted-foreground shrink-0">
+            {formatCompact(xp)}/{nextLevelData ? formatCompact(nextLevelData.xpRequired) : 'MAX'}
+          </span>
+
+          {/* Next bonus */}
+          {nextLevelData && (
+            <span className="text-xs text-emerald-400 shrink-0 hidden sm:inline">
+              {formatNextBonus(nextLevelData.bonus)}
+            </span>
+          )}
+        </div>
+
+        {/* Row 2: Stats with dividers */}
+        <div className="flex items-center text-xs divide-x divide-border">
+          <div className="flex-1 flex items-center justify-center gap-1 py-1">
+            <Zap className="w-3.5 h-3.5 text-yellow-400" />
+            <span className="font-medium">+{formatCompact(coinsPerTap)}</span>
+            <span className="text-muted-foreground">/tap</span>
+          </div>
+          <div className="flex-1 flex items-center justify-center gap-1 py-1">
+            <Clock className="w-3.5 h-3.5 text-blue-400" />
+            <span className="font-medium">+{formatCompact(coinsPerHour)}</span>
+            <span className="text-muted-foreground">/hr</span>
+          </div>
+          <div className="flex-1 flex items-center justify-center gap-1 py-1">
+            <Battery className="w-3.5 h-3.5 text-green-400" />
+            <span className="font-medium">{formatCompact(maxEnergy)}</span>
+            <span className="text-muted-foreground">max</span>
           </div>
         </div>
-        <Progress value={levelProgress} className="h-2 mb-2" />
-        {nextLevelData && (
-          <p className="text-xs text-muted-foreground text-center">
-            Next: {formatBonus(nextLevelData.bonus)}
-          </p>
-        )}
       </Card>
-
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 pb-2">
-        <Card className="p-2 text-center">
-          <Zap className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-          <p className="text-[10px] text-muted-foreground">Per tap</p>
-          <span className="text-sm font-semibold flex items-center justify-center gap-0.5">
-            +{formatCompact(coinsPerTap)}
-            <GooseIcon className="h-3 w-3" />
-          </span>
-        </Card>
-        <Card className="p-2 text-center">
-          <Clock className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-          <p className="text-[10px] text-muted-foreground">Per hour</p>
-          <span className="text-sm font-semibold flex items-center justify-center gap-0.5">
-            +{formatCompact(coinsPerHour)}
-            <GooseIcon className="h-3 w-3" />
-          </span>
-        </Card>
-        <Card className="p-2 text-center">
-          <Battery className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-          <p className="text-[10px] text-muted-foreground">Max energy</p>
-          <span className="text-sm font-semibold flex items-center justify-center">{formatCompact(maxEnergy)}</span>
-        </Card>
-      </div>
     </div>
   );
 }
