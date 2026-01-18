@@ -35,8 +35,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--success-text": "hsl(142 76% 36%)",
           "--success-border": "hsl(var(--border))",
           "--border-radius": "var(--radius)",
-          // Safe area + Header height (~3rem) + gap (0.5rem)
-          "--offset": "calc(var(--safe-area-top, 0px) + 3.5rem)",
+          "--offset": "1rem",
         } as React.CSSProperties
       }
       toastOptions={{
