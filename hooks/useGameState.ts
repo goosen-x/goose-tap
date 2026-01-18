@@ -541,8 +541,8 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
       const task = TASKS.find((t) => t.id === taskId);
       if (!task?.requirement) return 0;
       if (task.type === 'referral') return state.referrals.length;
-      if (task.id === 'reach-level-5') return state.level;
-      if (task.id === 'tap-1000') return state.totalTaps;
+      if (taskId.startsWith('reach-level-')) return state.level;
+      if (taskId.startsWith('tap-')) return state.totalTaps;
       return 0;
     },
     [state.referrals.length, state.level, state.totalTaps]

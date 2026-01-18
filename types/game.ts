@@ -272,6 +272,7 @@ export const UPGRADES: Upgrade[] = [
 
 // Task definitions
 export const TASKS: Task[] = [
+  // Social tasks
   {
     id: 'subscribe-gooselabs',
     type: 'social',
@@ -289,16 +290,11 @@ export const TASKS: Task[] = [
     description: 'Join our community chat',
     reward: 3000,
     action: 'https://t.me/goosetap_chat',
+    channelId: '@goosetap_chat',
     icon: '💬',
   },
-  {
-    id: 'daily-login',
-    type: 'daily',
-    title: 'Daily login',
-    description: 'Claim your daily reward',
-    reward: 1000,
-    icon: '📅',
-  },
+
+  // Referral tasks
   {
     id: 'invite-3-friends',
     type: 'referral',
@@ -309,6 +305,17 @@ export const TASKS: Task[] = [
     icon: '👥',
   },
   {
+    id: 'invite-10-friends',
+    type: 'referral',
+    title: 'Invite 10 friends',
+    description: 'Build your network',
+    reward: 50000,
+    requirement: 10,
+    icon: '👥',
+  },
+
+  // Progress tasks
+  {
     id: 'reach-level-5',
     type: 'daily',
     title: 'Reach level 5',
@@ -318,12 +325,30 @@ export const TASKS: Task[] = [
     icon: '⭐',
   },
   {
+    id: 'reach-level-10',
+    type: 'daily',
+    title: 'Reach level 10',
+    description: 'Become a pro tapper',
+    reward: 15000,
+    requirement: 10,
+    icon: '⭐',
+  },
+  {
     id: 'tap-1000',
     type: 'daily',
-    title: 'Tap 1000 times',
+    title: 'Tap 1,000 times',
     description: 'Get tapping!',
     reward: 2000,
     requirement: 1000,
+    icon: '👆',
+  },
+  {
+    id: 'tap-10000',
+    type: 'daily',
+    title: 'Tap 10,000 times',
+    description: 'Tap master',
+    reward: 10000,
+    requirement: 10000,
     icon: '👆',
   },
 ];
