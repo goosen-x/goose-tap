@@ -32,17 +32,17 @@ interface MultiTierReferralsData {
 
 const TIER_CONFIG = {
   tier1: {
-    label: 'Friends',
+    label: 'Tier 1',
     bonus: REFERRAL_BONUSES.tier1,
     percentage: REFERRAL_PERCENTAGES.tier1 * 100,
   },
   tier2: {
-    label: 'Level 2',
+    label: 'Tier 2',
     bonus: REFERRAL_BONUSES.tier2,
     percentage: REFERRAL_PERCENTAGES.tier2 * 100,
   },
   tier3: {
-    label: 'Level 3',
+    label: 'Tier 3',
     bonus: REFERRAL_BONUSES.tier3,
     percentage: REFERRAL_PERCENTAGES.tier3 * 100,
   },
@@ -150,8 +150,8 @@ function TierContent({
           {tier === 'tier1'
             ? 'Invite friends to start earning!'
             : tier === 'tier2'
-              ? 'Your friends haven\'t invited anyone yet'
-              : 'No level 3 referrals yet'}
+              ? 'No tier 2 referrals yet'
+              : 'No tier 3 referrals yet'}
         </div>
       )}
     </>
