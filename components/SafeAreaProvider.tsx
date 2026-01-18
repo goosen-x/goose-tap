@@ -45,9 +45,16 @@ export function SafeAreaProvider({ children }: { children: React.ReactNode }) {
       safeBottom = safeAreaInset.bottom;
     } else {
       // Non-fullscreen mode without contentSafeAreaInset (Bot API < 8.0):
-      // Telegram renders its header ON TOP of our WebView
-      // Need fixed fallback: iOS notch (~47px) + Telegram header (~56px) = ~103px
-      safeTop = TOTAL_HEADER_FALLBACK;
+      // Only apply fallback on iOS where Telegram header overlaps content
+      const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        // iOS: Telegram renders its header ON TOP of our WebView
+        // Need fallback: iOS notch (~47px) + Telegram header (~56px) = ~103px
+        safeTop = TOTAL_HEADER_FALLBACK;
+      } else {
+        // Desktop/Android: no extra padding needed
+        safeTop = 0;
+      }
       safeBottom = safeAreaInset.bottom;
     }
 
