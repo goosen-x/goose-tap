@@ -26,7 +26,7 @@ function AccordionItem({
   return (
     <AccordionPrimitive.Item
       data-slot="accordion-item"
-      className={cn("not-last:border-b", className)}
+      className={cn("border-b last:border-b-0", className)}
       {...props}
     />
   )
@@ -66,10 +66,10 @@ function AccordionContent({
   return (
     <AccordionPrimitive.Content
       data-slot="accordion-content"
-      className="text-sm overflow-hidden"
+      className="text-sm overflow-hidden bg-secondary/30 data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up"
       {...props}
     >
-      <div className={cn("bg-secondary/30", className)}>
+      <div className={cn(className)}>
         {children}
       </div>
     </AccordionPrimitive.Content>

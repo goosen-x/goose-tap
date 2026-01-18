@@ -285,7 +285,7 @@ export default function FriendsPage() {
 
       {/* Referral Tiers Accordion */}
       <div className="flex-1 px-4 pb-4">
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden py-0">
           <Accordion type="single" collapsible defaultValue="tier1">
             <AccordionItem value="tier1">
               <AccordionTrigger>
