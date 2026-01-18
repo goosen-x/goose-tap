@@ -232,13 +232,6 @@ export async function updateUserState(
   telegramId: number,
   state: Partial<GameState>
 ): Promise<DbUser> {
-  // DEBUG: Log when updateUserState is called
-  if (telegramId === 204887498) {
-    console.log('[DEBUG updateUserState] Called for user 204887498 with state keys:', Object.keys(state));
-    if ('totalEarnings' in state) {
-      console.log('[DEBUG updateUserState] WARNING: totalEarnings in state:', state.totalEarnings);
-    }
-  }
   // NOTE: total_earnings is NOT updated here - it should only increase via atomic operations
   // (tap, batch tap, task rewards, daily rewards, etc.)
   const { rows } = await sql<DbUser>`
