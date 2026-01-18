@@ -3,9 +3,13 @@
 import { useEffect } from 'react';
 import { useTelegram } from '@/hooks/useTelegram';
 
-// Telegram header height fallback when contentSafeAreaInset is not available
-// This is approximately 56px on iOS (close button + padding)
-const TELEGRAM_HEADER_FALLBACK = 56;
+// Fallback values when Telegram API doesn't provide safe area insets
+// iOS status bar with notch: ~47px
+// Telegram header (close button): ~56px
+// Total: ~103px, using 100px as safe value
+const IOS_NOTCH_HEIGHT = 47;
+const TELEGRAM_HEADER_HEIGHT = 56;
+const TOTAL_HEADER_FALLBACK = IOS_NOTCH_HEIGHT + TELEGRAM_HEADER_HEIGHT;
 
 export function SafeAreaProvider({ children }: { children: React.ReactNode }) {
   const {
@@ -40,10 +44,10 @@ export function SafeAreaProvider({ children }: { children: React.ReactNode }) {
       safeTop = safeAreaInset.top;
       safeBottom = safeAreaInset.bottom;
     } else {
-      // Non-fullscreen mode without contentSafeAreaInset:
-      // Use fixed fallback for Telegram header (~56px on iOS)
-      // Note: The workaround calc(100vh - viewportStableHeight) is for BOTTOM, not top
-      safeTop = 0; // Telegram header is OUTSIDE our WebView, no padding needed
+      // Non-fullscreen mode without contentSafeAreaInset (Bot API < 8.0):
+      // Telegram renders its header ON TOP of our WebView
+      // Need fixed fallback: iOS notch (~47px) + Telegram header (~56px) = ~103px
+      safeTop = TOTAL_HEADER_FALLBACK;
       safeBottom = safeAreaInset.bottom;
     }
 
