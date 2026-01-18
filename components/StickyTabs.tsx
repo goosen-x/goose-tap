@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
 export interface TabConfig {
@@ -29,21 +28,27 @@ export function StickyTabs({ tabs, defaultValue, header, children, className }: 
 
       {/* Sticky tabs navigation */}
       <div className="sticky top-0 z-10 bg-background px-4 pt-2 pb-2">
-        <TabsList className="w-full">
+        <div className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground">
           {tabs.map((tab) => (
-            <TabsTrigger
+            <button
               key={tab.value}
-              value={tab.value}
-              className="flex-1 cursor-pointer"
-              data-state={activeTab === tab.value ? 'active' : 'inactive'}
+              type="button"
               onClick={() => setActiveTab(tab.value)}
+              className={cn(
+                'inline-flex flex-1 items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                'disabled:pointer-events-none disabled:opacity-50 cursor-pointer',
+                activeTab === tab.value
+                  ? 'bg-background text-foreground shadow'
+                  : 'hover:bg-background/50'
+              )}
             >
               {tab.icon}
               {tab.icon && <span className="ml-1">{tab.label}</span>}
               {!tab.icon && tab.label}
-            </TabsTrigger>
+            </button>
           ))}
-        </TabsList>
+        </div>
       </div>
 
       {/* Tab content */}
