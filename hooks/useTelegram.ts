@@ -42,14 +42,20 @@ function getWebApp() {
 
 function subscribe(callback: () => void) {
   // Telegram WebApp doesn't have a subscription mechanism,
-  // but we can listen to viewport changes
+  // but we can listen to viewport and safe area changes
   const tg = getWebApp();
   if (tg) {
     tg.onEvent('viewportChanged', callback);
     tg.onEvent('themeChanged', callback);
+    tg.onEvent('safeAreaChanged', callback);
+    tg.onEvent('contentSafeAreaChanged', callback);
+    tg.onEvent('fullscreenChanged', callback);
     return () => {
       tg.offEvent('viewportChanged', callback);
       tg.offEvent('themeChanged', callback);
+      tg.offEvent('safeAreaChanged', callback);
+      tg.offEvent('contentSafeAreaChanged', callback);
+      tg.offEvent('fullscreenChanged', callback);
     };
   }
   return () => {};
@@ -97,6 +103,21 @@ export function useTelegram() {
   // In development without valid Telegram data, use mock data
   const isDev = process.env.NODE_ENV === 'development' && (!webApp || !webApp.initData);
 
+  // Default safe area (zero insets)
+  const defaultSafeArea = { top: 0, bottom: 0, left: 0, right: 0 };
+
+  // Combine system safe area + content safe area for total padding
+  const safeAreaInset = webApp?.safeAreaInset ?? defaultSafeArea;
+  const contentSafeAreaInset = webApp?.contentSafeAreaInset ?? defaultSafeArea;
+
+  // Total insets = system + content (for fullscreen mode)
+  const totalSafeArea = {
+    top: safeAreaInset.top + contentSafeAreaInset.top,
+    bottom: safeAreaInset.bottom + contentSafeAreaInset.bottom,
+    left: safeAreaInset.left + contentSafeAreaInset.left,
+    right: safeAreaInset.right + contentSafeAreaInset.right,
+  };
+
   return {
     webApp,
     isReady: webApp !== null || isDev,
@@ -107,6 +128,11 @@ export function useTelegram() {
     themeParams: webApp?.themeParams,
     viewportHeight: webApp?.viewportHeight,
     isExpanded: webApp?.isExpanded,
+    isFullscreen: webApp?.isFullscreen ?? false,
+    // Safe area insets
+    safeAreaInset,
+    contentSafeAreaInset,
+    totalSafeArea,
     // Safe haptic methods
     hapticFeedback,
     hapticNotification,

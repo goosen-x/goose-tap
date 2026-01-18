@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { QueryProvider } from "@/components/QueryProvider";
 import { GameProvider } from "@/components/GameProvider";
+import { SafeAreaProvider } from "@/components/SafeAreaProvider";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { Toaster } from "@/components/ui/sonner";
@@ -46,13 +47,13 @@ export default function RootLayout({
       >
         <QueryProvider>
           <GameProvider>
-            <div className="flex h-screen flex-col">
+            <SafeAreaProvider>
               <Header />
               <main className="flex-1 overflow-auto">
                 {children}
               </main>
               <BottomNav />
-            </div>
+            </SafeAreaProvider>
             <Toaster position="top-center" />
           </GameProvider>
         </QueryProvider>

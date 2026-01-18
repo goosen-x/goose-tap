@@ -85,6 +85,13 @@ interface TelegramHapticFeedback {
   selectionChanged: () => TelegramHapticFeedback;
 }
 
+interface TelegramSafeAreaInset {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+}
+
 interface TelegramWebApp {
   initData: string;
   initDataUnsafe: TelegramWebAppInitData;
@@ -101,6 +108,15 @@ interface TelegramWebApp {
   BackButton: TelegramBackButton;
   MainButton: TelegramMainButton;
   HapticFeedback: TelegramHapticFeedback;
+
+  // Safe area insets (Bot API 8.0+)
+  safeAreaInset?: TelegramSafeAreaInset;
+  contentSafeAreaInset?: TelegramSafeAreaInset;
+
+  // Fullscreen (Bot API 8.0+)
+  isFullscreen?: boolean;
+  requestFullscreen?: () => void;
+  exitFullscreen?: () => void;
 
   isVersionAtLeast: (version: string) => boolean;
   setHeaderColor: (color: 'bg_color' | 'secondary_bg_color' | string) => void;
