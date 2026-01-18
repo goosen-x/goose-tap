@@ -118,19 +118,23 @@ function ReferralRow({ referral }: { referral: ReferralInfo }) {
 function TierContent({
   tier,
   data,
-  earnings,
+  inviteBonus,
+  passiveEarnings,
 }: {
   tier: 'tier1' | 'tier2' | 'tier3';
   data: { count: number; referrals: ReferralInfo[] };
-  earnings: number;
+  inviteBonus: number;
+  passiveEarnings: number;
 }) {
+  const totalTierEarnings = inviteBonus + passiveEarnings;
+
   return (
     <>
-      {earnings > 0 && (
+      {totalTierEarnings > 0 && (
         <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/50">
           <GooseIcon className="w-3.5 h-3.5" />
           <span className="text-xs text-muted-foreground">
-            Earned: <span className="text-foreground font-medium">{formatNumber(earnings)}</span>
+            Earned: <span className="text-foreground font-medium">{formatNumber(totalTierEarnings)}</span>
           </span>
         </div>
       )}
@@ -229,8 +233,19 @@ export default function FriendsPage() {
   const tier1 = referralsData?.tier1 ?? { count: 0, referrals: [] };
   const tier2 = referralsData?.tier2 ?? { count: 0, referrals: [] };
   const tier3 = referralsData?.tier3 ?? { count: 0, referrals: [] };
-  const earnings = referralsData?.earnings ?? { tier1: 0, tier2: 0, tier3: 0, total: 0 };
+  const passiveEarnings = referralsData?.earnings ?? { tier1: 0, tier2: 0, tier3: 0, total: 0 };
   const totalReferrals = tier1.count + tier2.count + tier3.count;
+
+  // Calculate invite bonuses from counts
+  const inviteBonuses = {
+    tier1: tier1.count * REFERRAL_BONUSES.tier1,
+    tier2: tier2.count * REFERRAL_BONUSES.tier2,
+    tier3: tier3.count * REFERRAL_BONUSES.tier3,
+    total: tier1.count * REFERRAL_BONUSES.tier1 + tier2.count * REFERRAL_BONUSES.tier2 + tier3.count * REFERRAL_BONUSES.tier3,
+  };
+
+  // Total earnings = invite bonuses + passive income from taps
+  const totalEarnings = inviteBonuses.total + passiveEarnings.total;
 
   return (
     <div className="flex flex-1 flex-col overflow-auto bg-background">
@@ -264,7 +279,7 @@ export default function FriendsPage() {
             <div className="flex-1 text-right">
               <div className="flex items-baseline justify-end gap-2">
                 <span className="text-3xl font-bold">
-                  <SlidingNumber value={earnings.total} />
+                  <SlidingNumber value={totalEarnings} />
                 </span>
               </div>
               <div className="flex items-center justify-end gap-1 mt-2 text-muted-foreground">
@@ -309,7 +324,7 @@ export default function FriendsPage() {
                 </div>
               </AccordionTrigger>
               <AccordionContent>
-                <TierContent tier="tier1" data={tier1} earnings={earnings.tier1} />
+                <TierContent tier="tier1" data={tier1} inviteBonus={inviteBonuses.tier1} passiveEarnings={passiveEarnings.tier1} />
               </AccordionContent>
             </AccordionItem>
 
@@ -327,7 +342,7 @@ export default function FriendsPage() {
                 </div>
               </AccordionTrigger>
               <AccordionContent>
-                <TierContent tier="tier2" data={tier2} earnings={earnings.tier2} />
+                <TierContent tier="tier2" data={tier2} inviteBonus={inviteBonuses.tier2} passiveEarnings={passiveEarnings.tier2} />
               </AccordionContent>
             </AccordionItem>
 
@@ -345,7 +360,7 @@ export default function FriendsPage() {
                 </div>
               </AccordionTrigger>
               <AccordionContent>
-                <TierContent tier="tier3" data={tier3} earnings={earnings.tier3} />
+                <TierContent tier="tier3" data={tier3} inviteBonus={inviteBonuses.tier3} passiveEarnings={passiveEarnings.tier3} />
               </AccordionContent>
             </AccordionItem>
           </Accordion>
