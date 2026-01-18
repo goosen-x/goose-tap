@@ -64,4 +64,12 @@ The app initializes Telegram WebApp on load:
 
 - `TELEGRAM_BOT_TOKEN` — Bot token from @BotFather (stored in Vercel, not committed)
 
+## Language
+
+**UI language: English only.** All user-facing text in the app must be in English. This includes:
+- Labels, buttons, titles
+- Level names (Newbie, Beginner, Skilled, etc.)
+- Status messages (MAX, not МАКС)
+- Drawer/modal content
+
 сейчас 2026 год
