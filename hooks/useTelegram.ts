@@ -14,6 +14,14 @@ const DEV_USER: TelegramWebAppUser = {
   photo_url: undefined,
 };
 
+// Get start_param from URL (for web_app button opens)
+function getUrlStartParam(): string | null {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  // Support both ?startParam=ref_123 (from bot button) and ?ref=123 (dev testing)
+  return params.get('startParam') || (params.get('ref') ? `ref_${params.get('ref')}` : null);
+}
+
 // Create mock initData for development (only on client)
 function getDevInitData(): string {
   // Use static timestamp during SSR to avoid prerender warnings
@@ -26,12 +34,25 @@ function getDevInitData(): string {
   let initData = `user=${user}&auth_date=${Math.floor(Date.now() / 1000)}`;
 
   // Support referral testing via URL: localhost:3000?ref=204887498
-  const params = new URLSearchParams(window.location.search);
-  const refId = params.get('ref');
-  if (refId) {
-    initData += `&start_param=ref_${refId}`;
+  const startParam = getUrlStartParam();
+  if (startParam) {
+    initData += `&start_param=${startParam}`;
   }
 
+  return initData;
+}
+
+// Append start_param to initData if it came from URL (web_app button)
+function appendUrlStartParam(initData: string): string {
+  if (typeof window === 'undefined') return initData;
+
+  // If initData already has start_param, don't override
+  if (initData.includes('start_param=')) return initData;
+
+  const startParam = getUrlStartParam();
+  if (startParam) {
+    return initData + `&start_param=${startParam}`;
+  }
   return initData;
 }
 
@@ -121,9 +142,9 @@ export function useTelegram() {
   return {
     webApp,
     isReady: webApp !== null || isDev,
-    initData: webApp?.initData || (isDev ? getDevInitData() : ''),
+    initData: isDev ? getDevInitData() : appendUrlStartParam(webApp?.initData || ''),
     user: webApp?.initDataUnsafe?.user || (isDev ? DEV_USER : undefined),
-    startParam: webApp?.initDataUnsafe?.start_param,
+    startParam: webApp?.initDataUnsafe?.start_param || getUrlStartParam() || undefined,
     colorScheme: webApp?.colorScheme,
     themeParams: webApp?.themeParams,
     viewportHeight: webApp?.viewportHeight,

@@ -132,12 +132,14 @@ export default function EarnLayout({
   const pathname = usePathname();
 
   return (
-    <div className="flex flex-col bg-background">
-      {/* Header section (scrolls with content) */}
-      <EarnHeader />
+    <div className="flex flex-1 flex-col min-h-0 bg-background">
+      {/* Header section - fixed, doesn't scroll */}
+      <div className="shrink-0">
+        <EarnHeader />
+      </div>
 
-      {/* Tabs navigation */}
-      <div className="bg-background px-4 pt-2 pb-2">
+      {/* Tabs navigation - fixed, doesn't scroll */}
+      <div className="shrink-0 bg-background px-4 pt-2 pb-2">
         <div className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground">
           {TABS.map((tab) => {
             const isActive = pathname === tab.href;
@@ -161,8 +163,8 @@ export default function EarnLayout({
         </div>
       </div>
 
-      {/* Page content */}
-      <div className="px-4 pb-4">
+      {/* Page content - scrollable */}
+      <div className="flex-1 overflow-auto px-4 pt-2 pb-4">
         {children}
       </div>
     </div>

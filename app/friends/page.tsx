@@ -228,7 +228,7 @@ export default function FriendsPage() {
 
   if (!isLoaded || isLoadingReferrals) {
     return (
-      <div className="flex flex-1 flex-col bg-background p-4">
+      <div className="flex flex-1 flex-col overflow-auto bg-background p-4">
         <div className="h-32 bg-secondary rounded-xl animate-pulse mb-4" />
         <div className="h-12 bg-secondary rounded-lg animate-pulse mb-2" />
         <div className="h-12 bg-secondary rounded-lg animate-pulse mb-2" />
@@ -239,7 +239,7 @@ export default function FriendsPage() {
 
   const handleInvite = () => {
     const userId = user?.id || 'demo';
-    const referralLink = `https://t.me/goosetap_bot?startapp=ref_${userId}`;
+    const referralLink = `https://t.me/goosetap_bot?start=ref_${userId}`;
     const shareText = `Join me in Goose Tap and earn coins!`;
     const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(shareText)}`;
 
@@ -252,7 +252,7 @@ export default function FriendsPage() {
 
   const handleCopyLink = async () => {
     const userId = user?.id || 'demo';
-    const referralLink = `https://t.me/goosetap_bot?startapp=ref_${userId}`;
+    const referralLink = `https://t.me/goosetap_bot?start=ref_${userId}`;
 
     try {
       await navigator.clipboard.writeText(referralLink);
@@ -285,7 +285,7 @@ export default function FriendsPage() {
   const totalReferrals = tier1.count + tier2.count + tier3.count;
 
   return (
-    <div className="flex flex-1 flex-col bg-background">
+    <div className="flex flex-1 flex-col overflow-auto bg-background">
       {/* Hero Card */}
       <div className="p-4 pb-3">
         <Card className="p-4">

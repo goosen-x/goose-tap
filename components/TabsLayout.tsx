@@ -19,9 +19,9 @@ export function TabsLayout({ tabs, children }: TabsLayoutProps) {
   const pathname = usePathname();
 
   return (
-    <div className="flex flex-col bg-background">
-      {/* Tabs navigation */}
-      <div className="bg-background px-4 pt-4 pb-2">
+    <div className="flex flex-1 flex-col min-h-0 bg-background">
+      {/* Tabs navigation - fixed, doesn't scroll */}
+      <div className="shrink-0 bg-background px-4 pt-4 pb-2">
         <div className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground">
           {tabs.map((tab) => {
             const isActive = pathname === tab.href;
@@ -46,8 +46,8 @@ export function TabsLayout({ tabs, children }: TabsLayoutProps) {
         </div>
       </div>
 
-      {/* Page content */}
-      <div className="px-4 pb-4">
+      {/* Page content - scrollable */}
+      <div className="flex-1 overflow-auto px-4 pt-2 pb-4">
         {children}
       </div>
     </div>

@@ -40,13 +40,19 @@ export function BottomNav() {
 
   return (
     <nav className="flex shrink-0 items-center justify-around border-t bg-background px-2 py-2">
-      {navItems.map((item) => (
-        <NavItem
-          key={item.href}
-          {...item}
-          active={pathname === item.href}
-        />
-      ))}
+      {navItems.map((item) => {
+        // Check if current path matches or starts with the nav item href
+        const isActive = item.href === '/'
+          ? pathname === '/'
+          : pathname.startsWith(item.href);
+        return (
+          <NavItem
+            key={item.href}
+            {...item}
+            active={isActive}
+          />
+        );
+      })}
     </nav>
   );
 }
