@@ -3,31 +3,66 @@
 import { useEffect } from 'react';
 import { useTelegram } from '@/hooks/useTelegram';
 
+// Telegram header height fallback when contentSafeAreaInset is not available
+// This is approximately 56px on iOS (close button + padding)
+const TELEGRAM_HEADER_FALLBACK = 56;
+
 export function SafeAreaProvider({ children }: { children: React.ReactNode }) {
-  const { totalSafeArea, safeAreaInset, contentSafeAreaInset, isFullscreen } = useTelegram();
+  const {
+    totalSafeArea,
+    safeAreaInset,
+    contentSafeAreaInset,
+    isFullscreen,
+    viewportHeight,
+    webApp
+  } = useTelegram();
 
   useEffect(() => {
-    // Set CSS custom properties for safe area insets
     const root = document.documentElement;
 
-    // Use Telegram API values if available (Bot API 8.0+), otherwise use 0
-    // CSS env() fallback is applied in the style prop below
-    const hasTelegramSafeArea = safeAreaInset.top > 0 || contentSafeAreaInset.top > 0;
+    // Get viewportStableHeight for workaround calculation
+    const viewportStableHeight = webApp?.viewportStableHeight ?? window.innerHeight;
+    const screenHeight = window.innerHeight;
 
-    if (hasTelegramSafeArea) {
-      // Telegram provides safe area values
-      root.style.setProperty('--safe-area-top', `${totalSafeArea.top}px`);
-      root.style.setProperty('--safe-area-bottom', `${totalSafeArea.bottom}px`);
-      root.style.setProperty('--safe-area-left', `${totalSafeArea.left}px`);
-      root.style.setProperty('--safe-area-right', `${totalSafeArea.right}px`);
+    // Calculate safe area top:
+    // 1. If Telegram provides contentSafeAreaInset.top > 0, use it
+    // 2. If in fullscreen mode, use only system safe area (notch)
+    // 3. If not in fullscreen and no contentSafeAreaInset, use fallback for Telegram header
+    let safeTop = 0;
+    let safeBottom = 0;
+
+    if (contentSafeAreaInset.top > 0) {
+      // Telegram API provides content safe area (Bot API 8.0+)
+      safeTop = safeAreaInset.top + contentSafeAreaInset.top;
+      safeBottom = safeAreaInset.bottom + contentSafeAreaInset.bottom;
+    } else if (isFullscreen) {
+      // In fullscreen mode, only system safe area matters (notch)
+      safeTop = safeAreaInset.top;
+      safeBottom = safeAreaInset.bottom;
     } else {
-      // Fallback: use CSS env() for native safe area (notch, etc.)
-      // These will be resolved by the browser
-      root.style.setProperty('--safe-area-top', 'env(safe-area-inset-top, 0px)');
-      root.style.setProperty('--safe-area-bottom', 'env(safe-area-inset-bottom, 0px)');
-      root.style.setProperty('--safe-area-left', 'env(safe-area-inset-left, 0px)');
-      root.style.setProperty('--safe-area-right', 'env(safe-area-inset-right, 0px)');
+      // Non-fullscreen mode without contentSafeAreaInset:
+      // Use workaround: screenHeight - viewportStableHeight gives us the Telegram UI height
+      // Fallback to TELEGRAM_HEADER_FALLBACK if calculation gives 0
+      const calculatedTop = screenHeight - viewportStableHeight;
+      safeTop = calculatedTop > 0 ? calculatedTop : TELEGRAM_HEADER_FALLBACK;
+      safeBottom = safeAreaInset.bottom;
     }
+
+    // Set CSS custom properties
+    root.style.setProperty('--safe-area-top', `${safeTop}px`);
+    root.style.setProperty('--safe-area-bottom', `${safeBottom}px`);
+    root.style.setProperty('--safe-area-left', `${totalSafeArea.left}px`);
+    root.style.setProperty('--safe-area-right', `${totalSafeArea.right}px`);
+
+    // Debug info (remove in production)
+    console.log('[SafeArea]', {
+      isFullscreen,
+      screenHeight,
+      viewportStableHeight,
+      safeAreaInset,
+      contentSafeAreaInset,
+      calculated: { top: safeTop, bottom: safeBottom }
+    });
 
     // System safe area (notch, etc.)
     root.style.setProperty('--system-safe-area-top', `${safeAreaInset.top}px`);
@@ -37,7 +72,7 @@ export function SafeAreaProvider({ children }: { children: React.ReactNode }) {
     root.style.setProperty('--content-safe-area-top', `${contentSafeAreaInset.top}px`);
     root.style.setProperty('--content-safe-area-bottom', `${contentSafeAreaInset.bottom}px`);
 
-  }, [totalSafeArea, safeAreaInset, contentSafeAreaInset]);
+  }, [totalSafeArea, safeAreaInset, contentSafeAreaInset, isFullscreen, viewportHeight, webApp]);
 
   return (
     <div
