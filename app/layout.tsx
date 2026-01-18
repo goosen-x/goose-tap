@@ -4,7 +4,6 @@ import Script from "next/script";
 import { QueryProvider } from "@/components/QueryProvider";
 import { GameProvider } from "@/components/GameProvider";
 import { SafeAreaProvider } from "@/components/SafeAreaProvider";
-import { LogoBanner } from "@/components/LogoBanner";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { Toaster } from "@/components/ui/sonner";
@@ -49,7 +48,6 @@ export default function RootLayout({
         <QueryProvider>
           <GameProvider>
             <SafeAreaProvider>
-              <LogoBanner />
               <Header />
               <main className="flex flex-1 flex-col min-h-0">
                 {children}

@@ -117,13 +117,6 @@ export function useTelegram() {
         tg.disableVerticalSwipes();
       }
 
-      // Request fullscreen mode for immersive experience (Bot API 8.0+)
-      // This removes Telegram's header/footer for games and tap-based apps
-      const version = parseFloat(tg.version || '0');
-      if (version >= 8.0 && tg.requestFullscreen) {
-        tg.requestFullscreen();
-      }
-
       isInitialized = true;
     }
   }, []);
