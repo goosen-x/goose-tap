@@ -3,11 +3,9 @@
 import { useGame } from '@/components/GameProvider';
 import { TaskCard } from '@/components/TaskCard';
 import { TASKS } from '@/types/game';
-import { useTelegram } from '@/hooks/useTelegram';
 
 export default function SocialTasksPage() {
   const { completeTask, isTaskCompleted, getTaskProgress, isLoaded } = useGame();
-  const { webApp } = useTelegram();
 
   if (!isLoaded) {
     return (
@@ -18,15 +16,6 @@ export default function SocialTasksPage() {
       </div>
     );
   }
-
-  const handleAction = (action?: string) => {
-    if (!action) return;
-    if (webApp) {
-      webApp.openLink(action);
-    } else {
-      window.open(action, '_blank');
-    }
-  };
 
   const socialTasks = TASKS.filter((task) => task.type === 'social');
 
@@ -39,7 +28,6 @@ export default function SocialTasksPage() {
           isCompleted={isTaskCompleted(task.id)}
           progress={task.requirement ? getTaskProgress(task.id) : undefined}
           onComplete={() => completeTask(task.id)}
-          onAction={() => handleAction(task.action)}
         />
       ))}
       {socialTasks.length === 0 && (

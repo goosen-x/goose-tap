@@ -13,7 +13,7 @@ interface FriendCardProps {
 export function FriendCard({ friend }: FriendCardProps) {
   return (
     <Card className="flex flex-row items-center gap-3 p-4">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary">
         <User className="h-5 w-5" />
       </div>
       <div className="flex-1 min-w-0">
@@ -27,7 +27,7 @@ export function FriendCard({ friend }: FriendCardProps) {
           Joined {new Date(friend.joinedAt).toLocaleDateString()}
         </p>
       </div>
-      <Badge variant="secondary" className="flex items-center">
+      <Badge variant="secondary" className="flex items-center shrink-0">
         <Coins className="h-3 w-3 mr-1" />
         <SlidingNumber value={friend.coins} />
       </Badge>

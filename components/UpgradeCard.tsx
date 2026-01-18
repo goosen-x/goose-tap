@@ -17,12 +17,12 @@ interface UpgradeCardProps {
 }
 
 const iconMap: Record<string, React.ReactNode> = {
-  'golden-goose': <Coins className="h-6 w-6" />,
-  'egg-farm': <Clock className="h-6 w-6" />,
-  'golden-egg': <Sparkles className="h-6 w-6" />,
-  'goose-nest': <TrendingUp className="h-6 w-6" />,
-  'energy-drink': <Battery className="h-6 w-6" />,
-  'turbo-tap': <Rocket className="h-6 w-6" />,
+  'golden-goose': <Coins className="h-5 w-5" />,
+  'egg-farm': <Clock className="h-5 w-5" />,
+  'golden-egg': <Sparkles className="h-5 w-5" />,
+  'goose-nest': <TrendingUp className="h-5 w-5" />,
+  'energy-drink': <Battery className="h-5 w-5" />,
+  'turbo-tap': <Rocket className="h-5 w-5" />,
 };
 
 export function UpgradeCard({ upgrade, level, coins, onPurchase }: UpgradeCardProps) {
@@ -44,30 +44,22 @@ export function UpgradeCard({ upgrade, level, coins, onPurchase }: UpgradeCardPr
 
   return (
     <Card className="flex flex-row items-center gap-3 p-4">
-      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-secondary">
-        {iconMap[upgrade.id] || <Coins className="h-6 w-6" />}
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary">
+        {iconMap[upgrade.id] || <Coins className="h-5 w-5" />}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <h3 className="font-medium">
-            {upgrade.name}
-          </h3>
+          <h3 className="font-medium">{upgrade.name}</h3>
           <Badge variant="outline" className="flex items-center gap-0.5">
             Lvl <SlidingNumber value={level} />
           </Badge>
         </div>
-        <p className="text-sm text-muted-foreground">
-          {upgrade.description}
-        </p>
-        <p className="mt-0.5 text-sm font-medium">
-          {getBonusText()}
-        </p>
+        <p className="text-sm text-muted-foreground">{upgrade.description}</p>
+        <p className="mt-0.5 text-sm font-medium">{getBonusText()}</p>
       </div>
-      <div className="flex flex-col items-end gap-1">
+      <div className="flex flex-col items-end gap-1 shrink-0">
         {isMaxLevel ? (
-          <Badge variant="outline" className="text-green-600">
-            MAX
-          </Badge>
+          <Badge variant="outline" className="text-green-600">MAX</Badge>
         ) : (
           <Button
             size="sm"

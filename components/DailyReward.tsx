@@ -6,17 +6,19 @@ import { useTelegram } from '@/hooks/useTelegram';
 import { DailyReward as DailyRewardType, DAILY_REWARDS } from '@/types/game';
 import { formatNumber } from '@/lib/storage';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+} from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SlidingNumber } from '@/components/ui/sliding-number';
-import { Coins, Gift, Check, Clock, Sparkles } from 'lucide-react';
+import { Gift, Check, Clock, Sparkles } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
+import { GooseIcon } from '@/components/ui/goose-icon';
 import { cn } from '@/lib/utils';
 
 interface DailyRewardProps {
@@ -24,7 +26,7 @@ interface DailyRewardProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function DailyRewardDialog({ open, onOpenChange }: DailyRewardProps) {
+export function DailyRewardDrawer({ open, onOpenChange }: DailyRewardProps) {
   const {
     dailyStreak,
     canClaimDailyReward,
@@ -56,145 +58,147 @@ export function DailyRewardDialog({ open, onOpenChange }: DailyRewardProps) {
     onOpenChange(false);
   };
 
-  // Current day in streak (1-7)
+  // Current day in week cycle (1-7)
   const currentDay = (dailyStreak % 7) + 1;
+  // Days completed this week (based on actual streak)
+  const daysCompletedThisWeek = dailyStreak % 7;
+  // Handle week completion (streak 7, 14, 21... should show 7 dots)
+  const daysCompleted = (daysCompletedThisWeek === 0 && dailyStreak > 0) ? 7 : daysCompletedThisWeek;
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Gift className="h-5 w-5" />
-            Daily Rewards
-          </DialogTitle>
-          <DialogDescription>
-            {canClaimDailyReward
-              ? 'Claim your daily reward!'
-              : `Come back tomorrow for day ${currentDay === 7 ? 1 : currentDay + 1}!`}
-          </DialogDescription>
-        </DialogHeader>
+    <Drawer open={open} onOpenChange={handleClose}>
+      <DrawerContent>
+        <div className="w-full px-4 pb-8">
+          <DrawerHeader className="px-0 text-center">
+            <DrawerTitle className="flex items-center justify-center gap-2">
+              <Gift className="h-5 w-5" />
+              Daily Rewards
+            </DrawerTitle>
+            <DrawerDescription className="text-center">
+              {canClaimDailyReward
+                ? 'Claim your daily reward!'
+                : `Come back tomorrow for day ${currentDay === 7 ? 1 : currentDay + 1}!`}
+            </DrawerDescription>
+          </DrawerHeader>
 
-        {claimedReward ? (
-          // Success state
-          <div className="py-6 text-center">
-            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-green-500/20">
-              <Sparkles className="h-10 w-10 text-green-500" />
-            </div>
-            <h3 className="text-xl font-bold mb-2">Reward Claimed!</h3>
-            <div className="flex items-center justify-center gap-4 text-lg">
-              <span className="flex items-center gap-1">
-                <Coins className="h-5 w-5" />
-                +<SlidingNumber value={claimedReward.coins} />
-              </span>
-              <span className="text-muted-foreground flex items-center gap-1">
-                +<SlidingNumber value={claimedReward.xp} /> XP
-              </span>
-            </div>
-            {claimedReward.bonus && (
-              <Badge variant="secondary" className="mt-3">
-                🎉 Week Complete Bonus!
-              </Badge>
-            )}
-            <Button onClick={handleClose} className="mt-6 cursor-pointer">
-              Awesome!
-            </Button>
-          </div>
-        ) : (
-          // Rewards grid
-          <>
-            <div className="grid grid-cols-7 gap-1">
-              {DAILY_REWARDS.map((reward, index) => {
-                const day = index + 1;
-                const isPast = day < currentDay;
-                const isCurrent = day === currentDay;
-                const isFuture = day > currentDay;
-
-                return (
-                  <DayCard
-                    key={day}
-                    day={day}
-                    reward={reward}
-                    isPast={isPast}
-                    isCurrent={isCurrent}
-                    isFuture={isFuture}
-                    canClaim={canClaimDailyReward && isCurrent}
-                  />
-                );
-              })}
-            </div>
-
-            <div className="flex items-center justify-between pt-2">
-              <div className="text-sm text-muted-foreground flex items-center gap-1">
-                🔥 Streak: <SlidingNumber value={dailyStreak} /> day{dailyStreak !== 1 ? 's' : ''}
+          {claimedReward ? (
+            // Success state
+            <div className="py-6 text-center">
+              <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-green-500/20">
+                <Sparkles className="h-10 w-10 text-green-500" />
               </div>
-              <div className="text-sm text-muted-foreground flex items-center gap-1">
-                Day <SlidingNumber value={currentDay} />/7
-              </div>
-            </div>
-
-            <Button
-              onClick={handleClaim}
-              disabled={!canClaimDailyReward || isClaiming}
-              className="w-full cursor-pointer"
-              size="lg"
-            >
-              {isClaiming ? (
-                'Claiming...'
-              ) : canClaimDailyReward ? (
-                <span className="flex items-center">
-                  <Gift className="h-4 w-4 mr-2" />
-                  Claim +<SlidingNumber value={currentDailyReward.coins} />
+              <h3 className="text-xl font-bold mb-2">Reward Claimed!</h3>
+              <div className="flex items-center justify-center gap-4 text-lg">
+                <span className="flex items-center gap-1">
+                  <GooseIcon className="h-5 w-5" />
+                  +<SlidingNumber value={claimedReward.coins} />
                 </span>
-              ) : (
-                <>
-                  <Clock className="h-4 w-4 mr-2" />
-                  Already Claimed
-                </>
+                <span className="text-muted-foreground flex items-center gap-1">
+                  +<SlidingNumber value={claimedReward.xp} /> XP
+                </span>
+              </div>
+              {claimedReward.bonus && (
+                <Badge variant="secondary" className="mt-3">
+                  🎉 Week Complete Bonus!
+                </Badge>
               )}
-            </Button>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+              <Button onClick={handleClose} className="mt-6 cursor-pointer">
+                Awesome!
+              </Button>
+            </div>
+          ) : (
+            // Variant 4: Compact grid + large reward
+            <div className="space-y-6">
+              {/* Today's Reward Card */}
+              <Card className={cn(
+                "p-6 text-center",
+                canClaimDailyReward && "ring-2 ring-primary bg-primary/5"
+              )}>
+                <p className="text-sm text-muted-foreground mb-2">Today's Reward</p>
+                <div className="flex items-center justify-center gap-2 text-3xl font-bold">
+                  <GooseIcon className="h-8 w-8" />
+                  <SlidingNumber value={currentDailyReward.coins} />
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  +{currentDailyReward.xp} XP
+                </p>
+              </Card>
+
+              {/* Progress Dots */}
+              <div className="flex items-center justify-between px-2">
+                {DAILY_REWARDS.map((_, index) => {
+                  const day = index + 1;
+                  const isCompleted = day <= daysCompleted;
+                  const isCurrent = day === currentDay && canClaimDailyReward;
+
+                  return (
+                    <div key={day} className="flex flex-col items-center gap-1.5">
+                      <div
+                        className={cn(
+                          "w-5 h-5 rounded-full transition-colors",
+                          isCompleted && "bg-primary",
+                          isCurrent && "bg-primary ring-2 ring-primary/30 ring-offset-2 ring-offset-background",
+                          !isCompleted && !isCurrent && "bg-muted-foreground/30"
+                        )}
+                      />
+                      <span className="text-xs text-muted-foreground">{day}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Streak Info */}
+              <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  🔥 {dailyStreak} {dailyStreak === 1 ? 'day' : 'days'}
+                </span>
+                <span>•</span>
+                <span>Day {currentDay}/7</span>
+              </div>
+
+              {/* Claim Button */}
+              <Button
+                onClick={handleClaim}
+                disabled={!canClaimDailyReward || isClaiming}
+                className="w-full cursor-pointer"
+                size="lg"
+              >
+                {isClaiming ? (
+                  <Spinner />
+                ) : canClaimDailyReward ? (
+                  <span className="flex items-center">
+                    <Gift className="h-4 w-4 mr-2" />
+                    Claim Reward
+                  </span>
+                ) : (
+                  <>
+                    <Clock className="h-4 w-4 mr-2" />
+                    Already Claimed
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+        </div>
+      </DrawerContent>
+    </Drawer>
   );
 }
 
-interface DayCardProps {
-  day: number;
-  reward: DailyRewardType;
-  isPast: boolean;
-  isCurrent: boolean;
-  isFuture: boolean;
-  canClaim: boolean;
-}
-
-function DayCard({ day, reward, isPast, isCurrent, isFuture, canClaim }: DayCardProps) {
+// Days progress dots component
+function DaysProgress({ current, total = 7 }: { current: number; total?: number }) {
   return (
-    <Card
-      className={cn(
-        'p-1.5 text-center relative',
-        isPast && 'bg-green-500/10 border-green-500/30',
-        isCurrent && canClaim && 'ring-2 ring-primary bg-primary/10',
-        isCurrent && !canClaim && 'bg-green-500/10 border-green-500/30',
-        isFuture && 'opacity-50'
-      )}
-    >
-      {isPast && (
-        <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-0.5">
-          <Check className="h-2 w-2 text-white" />
-        </div>
-      )}
-      {isCurrent && !canClaim && (
-        <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-0.5">
-          <Check className="h-2 w-2 text-white" />
-        </div>
-      )}
-      <p className="text-[10px] text-muted-foreground">Day {day}</p>
-      <div className="my-1">
-        <Coins className="h-4 w-4 mx-auto" />
-      </div>
-      <p className="text-[10px] font-medium">{formatNumber(reward.coins)}</p>
-    </Card>
+    <div className="flex items-center gap-1">
+      {Array.from({ length: total }).map((_, i) => (
+        <span
+          key={i}
+          className={cn(
+            "w-1.5 h-1.5 rounded-full transition-colors",
+            i < current ? "bg-primary" : "bg-muted-foreground/30"
+          )}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -205,9 +209,18 @@ export function DailyRewardCard() {
     canClaimDailyReward,
     currentDailyReward,
     timeUntilNextDaily,
+    claimDailyReward,
   } = useGame();
+  const { hapticNotification } = useTelegram();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [timeLeft, setTimeLeft] = useState(timeUntilNextDaily);
+  const [isClaiming, setIsClaiming] = useState(false);
+
+  // Current day in week cycle (1-7)
+  const currentDay = (dailyStreak % 7) + 1;
+  // Days completed this week (based on actual streak)
+  const daysCompletedThisWeek = dailyStreak % 7;
+  const daysCompleted = (daysCompletedThisWeek === 0 && dailyStreak > 0) ? 7 : daysCompletedThisWeek;
 
   // Update countdown timer
   useEffect(() => {
@@ -231,49 +244,95 @@ export function DailyRewardCard() {
     return `${hours}h ${minutes}m`;
   };
 
+  const handleClaim = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!canClaimDailyReward || isClaiming) return;
+
+    setIsClaiming(true);
+    const reward = await claimDailyReward();
+
+    if (reward) {
+      hapticNotification('success');
+    } else {
+      hapticNotification('error');
+    }
+    setIsClaiming(false);
+  };
+
   return (
     <>
       <Card
         className={cn(
-          'flex flex-row items-center gap-3 p-4 cursor-pointer transition-colors',
+          'p-4 cursor-pointer transition-colors',
           canClaimDailyReward && 'ring-2 ring-primary bg-primary/5'
         )}
         onClick={() => setDialogOpen(true)}
       >
-        <div
-          className={cn(
-            'flex h-10 w-10 items-center justify-center rounded-full',
-            canClaimDailyReward ? 'bg-primary text-primary-foreground' : 'bg-secondary'
-          )}
-        >
-          <Gift className="h-5 w-5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="font-medium">Daily Reward</h3>
-            {canClaimDailyReward && (
-              <Badge variant="default" className="text-xs">
-                Ready!
-              </Badge>
+        {/* Row 1: Icon, Title, Reward, Action */}
+        <div className="flex items-center gap-3">
+          <div
+            className={cn(
+              'flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
+              canClaimDailyReward ? 'bg-primary text-primary-foreground' : 'bg-secondary'
             )}
+          >
+            <Gift className="h-5 w-5" />
           </div>
-          <p className="text-sm text-muted-foreground">
-            {canClaimDailyReward
-              ? `Day ${(dailyStreak % 7) + 1} reward available`
-              : `Next in ${formatTimeLeft(timeLeft)}`}
-          </p>
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          <Badge variant="secondary" className="flex items-center">
+
+          <div className="flex-1 min-w-0">
+            <h3 className="font-medium">Daily Reward</h3>
+          </div>
+
+          <Badge variant="secondary" className="shrink-0">
             +<SlidingNumber value={currentDailyReward.coins} />
           </Badge>
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
-            🔥 <SlidingNumber value={dailyStreak} /> day streak
+
+          {canClaimDailyReward ? (
+            <Button
+              size="sm"
+              onClick={handleClaim}
+              disabled={isClaiming}
+              className="cursor-pointer shrink-0"
+            >
+              {isClaiming ? <Spinner /> : 'Claim'}
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDialogOpen(true);
+              }}
+              className="cursor-pointer shrink-0"
+            >
+              View
+            </Button>
+          )}
+        </div>
+
+        {/* Row 2: Progress dots, Day counter, Streak/Timer */}
+        <div className="flex items-center gap-3 mt-1 ml-[52px]">
+          <DaysProgress current={daysCompleted} total={7} />
+
+          <span className="text-xs text-muted-foreground">
+            Day {currentDay}/7
           </span>
+
+          {canClaimDailyReward ? (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              🔥 {dailyStreak} {dailyStreak === 1 ? 'day' : 'days'}
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {formatTimeLeft(timeLeft)}
+            </span>
+          )}
         </div>
       </Card>
 
-      <DailyRewardDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <DailyRewardDrawer open={dialogOpen} onOpenChange={setDialogOpen} />
     </>
   );
 }

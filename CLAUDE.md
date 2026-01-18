@@ -20,6 +20,24 @@ pnpm lint     # Run ESLint
 - **Telegram WebApp SDK** loaded via `<Script>` in `app/layout.tsx`
 - **shadcn/ui** configured (radix-vega style, lucide icons)
 
+## ВАЖНО: Правило использования shadcn/ui
+
+**Всегда используй компоненты из shadcn/ui, если они существуют.** Не создавай кастомные компоненты для UI, который уже есть в библиотеке.
+
+Перед созданием нового компонента:
+1. Проверь наличие в shadcn: `mcp__shadcn__search_items_in_registries`
+2. Если компонент существует — установи и используй его
+3. Если нужна кастомизация — расширяй shadcn компонент, а не пиши с нуля
+
+Установленные shadcn компоненты находятся в `components/ui/`.
+
+### Item vs Card
+
+- **Item** (`@shadcn/item`) — для простых списков без сложного контента (меню, настройки)
+- **Card** — для карточек со сложным layout (прогресс-бары, множественные действия, вложенный контент)
+
+Item не подходит когда есть: Progress, несколько строк actions, контент который должен занимать всю ширину.
+
 ### Key Directories
 
 - `docs/` — Markdown files with reports and documentation

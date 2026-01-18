@@ -4,11 +4,9 @@ import { useGame } from '@/components/GameProvider';
 import { TaskCard } from '@/components/TaskCard';
 import { DailyRewardCard } from '@/components/DailyReward';
 import { TASKS } from '@/types/game';
-import { useTelegram } from '@/hooks/useTelegram';
 
 export default function AllTasksPage() {
   const { completeTask, isTaskCompleted, getTaskProgress, isLoaded } = useGame();
-  const { webApp } = useTelegram();
 
   if (!isLoaded) {
     return (
@@ -20,15 +18,6 @@ export default function AllTasksPage() {
     );
   }
 
-  const handleAction = (action?: string) => {
-    if (!action) return;
-    if (webApp) {
-      webApp.openLink(action);
-    } else {
-      window.open(action, '_blank');
-    }
-  };
-
   return (
     <div className="flex flex-col gap-3">
       <DailyRewardCard />
@@ -39,7 +28,6 @@ export default function AllTasksPage() {
           isCompleted={isTaskCompleted(task.id)}
           progress={task.requirement ? getTaskProgress(task.id) : undefined}
           onComplete={() => completeTask(task.id)}
-          onAction={() => handleAction(task.action)}
         />
       ))}
     </div>

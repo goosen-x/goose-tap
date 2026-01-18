@@ -121,6 +121,16 @@ export function useTelegram() {
     }
   }, [webApp]);
 
+  // Open Telegram link (channel, group, user, etc.)
+  const openTelegramLink = useCallback((url: string) => {
+    if (webApp?.openTelegramLink) {
+      webApp.openTelegramLink(url);
+    } else {
+      // Fallback for development or unsupported versions
+      window.open(url, '_blank');
+    }
+  }, [webApp]);
+
   // In development without valid Telegram data, use mock data
   const isDev = process.env.NODE_ENV === 'development' && (!webApp || !webApp.initData);
 
@@ -158,5 +168,7 @@ export function useTelegram() {
     hapticFeedback,
     hapticNotification,
     isHapticSupported: isHapticSupported(webApp),
+    // Navigation
+    openTelegramLink,
   };
 }

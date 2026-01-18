@@ -38,16 +38,14 @@ export function LeaderboardCard({ entry, isCurrentUser }: LeaderboardCardProps) 
   return (
     <Card
       className={cn(
-        'flex flex-row items-center gap-3 p-3',
+        'flex flex-row items-center gap-3 p-4',
         isCurrentUser && 'border-primary bg-primary/5'
       )}
     >
-      {/* Rank - static */}
       <div className="flex h-8 w-8 shrink-0 items-center justify-center">
         {getRankDisplay(entry.rank)}
       </div>
 
-      {/* Avatar */}
       <Avatar className="h-10 w-10 shrink-0">
         {entry.photoUrl && (
           <AvatarImage src={entry.photoUrl} alt={entry.firstName} />
@@ -57,7 +55,6 @@ export function LeaderboardCard({ entry, isCurrentUser }: LeaderboardCardProps) 
         </AvatarFallback>
       </Avatar>
 
-      {/* Name and level */}
       <div className="flex flex-1 flex-col min-w-0">
         <span className="font-medium truncate">
           {entry.firstName}
@@ -68,7 +65,6 @@ export function LeaderboardCard({ entry, isCurrentUser }: LeaderboardCardProps) 
         <span className="text-xs text-muted-foreground">Lvl {entry.level}</span>
       </div>
 
-      {/* Coins */}
       <div className="flex items-center gap-1 shrink-0">
         <span className="font-semibold">{formatCompact(entry.coins)}</span>
         <GooseIcon className="h-4 w-4" />
