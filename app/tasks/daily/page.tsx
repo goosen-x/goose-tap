@@ -1,9 +1,9 @@
 'use client';
 
 import { useGame } from '@/components/GameProvider';
-import { TaskCard } from '@/components/TaskCard';
 import { DailyRewardCard } from '@/components/DailyReward';
-import { TASKS } from '@/types/game';
+import { TaskCard } from '@/components/TaskCard';
+import { getAvailableTasks } from '@/types/game';
 
 export default function DailyTasksPage() {
   const { completeTask, isTaskCompleted, getTaskProgress, isLoaded } = useGame();
@@ -18,12 +18,7 @@ export default function DailyTasksPage() {
     );
   }
 
-  // Filter by type and prerequisite
-  const dailyTasks = TASKS.filter(
-    (task) =>
-      (task.type === 'daily' || task.type === 'referral') &&
-      (!task.prerequisite || isTaskCompleted(task.prerequisite))
-  );
+  const dailyTasks = getAvailableTasks(['daily'], isTaskCompleted);
 
   return (
     <div className="flex flex-col gap-3">
@@ -37,11 +32,6 @@ export default function DailyTasksPage() {
           onComplete={() => completeTask(task.id)}
         />
       ))}
-      {dailyTasks.length === 0 && (
-        <div className="mt-12 text-center text-muted-foreground">
-          No daily tasks available
-        </div>
-      )}
     </div>
   );
 }

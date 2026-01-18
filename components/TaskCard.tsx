@@ -10,7 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { SlidingNumber } from '@/components/ui/sliding-number';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useTelegram } from '@/hooks/useTelegram';
-import { Check, Megaphone, MessageSquare, Calendar, Users, Star, Target, Lock, ExternalLink } from 'lucide-react';
+import { Check, Megaphone, Calendar, Users, Star, Target, ExternalLink, Zap, Trophy } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 
 interface TaskCardProps {
@@ -20,21 +20,41 @@ interface TaskCardProps {
   onComplete: () => void;
 }
 
-const iconMap: Record<string, React.ReactNode> = {
-  'subscribe-gooselabs': <Megaphone className="h-5 w-5" />,
-  'join-group': <MessageSquare className="h-5 w-5" />,
-  'daily-login': <Calendar className="h-5 w-5" />,
-  'invite-3-friends': <Users className="h-5 w-5" />,
-  'reach-level-5': <Star className="h-5 w-5" />,
-  'tap-1000': <Target className="h-5 w-5" />,
-};
+function getTaskIcon(taskId: string): React.ReactNode {
+  // Social tasks
+  if (taskId.startsWith('subscribe-') || taskId.startsWith('join-') || taskId.startsWith('follow-')) {
+    return <Megaphone className="h-5 w-5" />;
+  }
+  // Referral tasks
+  if (taskId.startsWith('invite-')) {
+    return <Users className="h-5 w-5" />;
+  }
+  // Level tasks
+  if (taskId.startsWith('reach-level-')) {
+    return <Star className="h-5 w-5" />;
+  }
+  // Tap tasks (daily and progress)
+  if (taskId.startsWith('tap-') || taskId.startsWith('daily-tap-')) {
+    return <Target className="h-5 w-5" />;
+  }
+  // Upgrade tasks
+  if (taskId.includes('upgrade')) {
+    return <Zap className="h-5 w-5" />;
+  }
+  // Daily login
+  if (taskId === 'daily-login') {
+    return <Calendar className="h-5 w-5" />;
+  }
+  // Default
+  return <Trophy className="h-5 w-5" />;
+}
 
 export function TaskCard({ task, isCompleted, progress, onComplete }: TaskCardProps) {
   const { checkSubscription, isChecking } = useSubscription();
   const { user, hapticNotification, openTelegramLink } = useTelegram();
   const [isStarted, setIsStarted] = useState(false);
 
-  const hasProgress = task.requirement && task.requirement > 1;
+  const hasProgress = task.requirement !== undefined && task.requirement > 0;
   const progressPercentage = hasProgress && progress !== undefined
     ? Math.min((progress / task.requirement!) * 100, 100)
     : 0;
@@ -111,8 +131,8 @@ export function TaskCard({ task, isCompleted, progress, onComplete }: TaskCardPr
       );
     }
 
-    // Locked task
-    return <Badge variant="outline"><Lock className="h-3 w-3 mr-1" />Locked</Badge>;
+    // No action available
+    return null;
   };
 
   return (
@@ -120,7 +140,7 @@ export function TaskCard({ task, isCompleted, progress, onComplete }: TaskCardPr
       <div className="flex items-start gap-3">
         {/* Icon */}
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary">
-          {iconMap[task.id] || <Target className="h-5 w-5" />}
+          {getTaskIcon(task.id)}
         </div>
 
         {/* Content */}

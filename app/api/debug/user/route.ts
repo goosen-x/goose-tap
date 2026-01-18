@@ -24,6 +24,9 @@ export async function GET(request: Request) {
         first_name,
         coins,
         level,
+        total_taps,
+        daily_taps,
+        last_daily_taps_reset,
         referrals,
         referred_by
       FROM users
@@ -42,6 +45,9 @@ export async function GET(request: Request) {
       firstName: user.first_name,
       coins: user.coins,
       level: user.level,
+      totalTaps: user.total_taps,
+      dailyTaps: user.daily_taps,
+      lastDailyTapsReset: user.last_daily_taps_reset,
       referrals: user.referrals,
       referralsType: typeof user.referrals,
       referralsIsArray: Array.isArray(user.referrals),

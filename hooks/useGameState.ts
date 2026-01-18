@@ -50,6 +50,8 @@ export interface UseGameStateResult {
   coinsPerHour: number;
   level: number;
   totalTaps: number;
+  dailyTaps: number;
+  lastDailyTapsReset: number;
   upgrades: UserUpgrade[];
   tasks: UserTask[];
   referrals: Referral[];
@@ -114,6 +116,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
   const lastTapRef = useRef(0);
   const tapBatchRef = useRef(0);
   const accumulatedCoins = useRef(0);
+  const pendingTasksRef = useRef<Set<string>>(new Set());
 
   // Constants
   const TAP_THROTTLE_MS = 50;
@@ -143,8 +146,21 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     loadGame(initData)
       .then((response) => {
         if (response.success && response.state) {
-          setState(response.state);
-          saveGameState(response.state);
+          const serverState = response.state;
+          // Get current local state for merge
+          const localState = stateRef.current;
+          // Merge with local state - take max for taps (don't lose progress after migration)
+          const mergedState: GameState = {
+            ...serverState,
+            totalTaps: Math.max(localState.totalTaps, serverState.totalTaps),
+            dailyTaps: Math.max(localState.dailyTaps, serverState.dailyTaps),
+          };
+          setState(mergedState);
+          saveGameState(mergedState);
+          // Sync merged taps to server if local had more
+          if (mergedState.dailyTaps > serverState.dailyTaps || mergedState.totalTaps > serverState.totalTaps) {
+            saveGame(initData, mergedState).catch(console.error);
+          }
           setOfflineEarnings(response.offlineEarnings ?? 0);
           setOfflineMinutes(response.offlineMinutes ?? 0);
         } else {
@@ -264,11 +280,13 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
   // Sync on focus - merge server state with local state
   const handleSyncFromServer = useCallback((serverState: GameState) => {
     setState(prev => {
-      // Merge strategy: take max for coins/xp (don't lose progress), server for energy
+      // Merge strategy: take max for coins/xp/taps (don't lose progress), server for energy
       const mergedState = {
         ...serverState,
         coins: Math.max(prev.coins, serverState.coins),
         xp: Math.max(prev.xp, serverState.xp),
+        totalTaps: Math.max(prev.totalTaps, serverState.totalTaps),
+        dailyTaps: Math.max(prev.dailyTaps, serverState.dailyTaps),
       };
       saveGameState(mergedState);
       return mergedState;
@@ -294,6 +312,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
       const newXP = prev.xp + XP_REWARDS.tap;
       const newLevel = calculateLevelFromXP(newXP);
       const newTotalTaps = prev.totalTaps + 1;
+      const newDailyTaps = prev.dailyTaps + 1;
 
       let stats = {
         coinsPerTap: prev.coinsPerTap,
@@ -311,6 +330,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
         energy: prev.energy - 1,
         level: newLevel,
         totalTaps: newTotalTaps,
+        dailyTaps: newDailyTaps,
         ...stats,
       };
       // Update ref immediately for reliable sendBeacon
@@ -434,6 +454,9 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     const task = TASKS.find((t) => t.id === taskId);
     if (!task) return false;
 
+    // Prevent double-click: check if task is already being processed
+    if (pendingTasksRef.current.has(taskId)) return false;
+
     // Pre-validate locally
     const currentState = stateRef.current;
     const existing = currentState.tasks.find((t) => t.taskId === taskId);
@@ -441,6 +464,9 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
 
     if (task.type === 'referral' && task.requirement && currentState.referrals.length < task.requirement) return false;
     if (task.id === 'reach-level-5' && task.requirement && currentState.level < task.requirement) return false;
+
+    // Mark task as pending
+    pendingTasksRef.current.add(taskId);
 
     // Optimistic update
     const newTasks: UserTask[] = existing
@@ -475,6 +501,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
     if (initDataRef.current) {
       completeTaskAction(initDataRef.current, taskId)
         .then((response) => {
+          pendingTasksRef.current.delete(taskId);
           // Sync with server state to ensure consistency
           if (response.success && response.state) {
             setState(response.state);
@@ -486,11 +513,14 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
           }
         })
         .catch((err) => {
+          pendingTasksRef.current.delete(taskId);
           console.error('[Task] Server action failed, rolling back:', err);
           // Rollback to previous state
           setState(currentState);
           saveGameState(currentState);
         });
+    } else {
+      pendingTasksRef.current.delete(taskId);
     }
 
     return true;
@@ -542,10 +572,25 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
       if (!task?.requirement) return 0;
       if (task.type === 'referral') return state.referrals.length;
       if (taskId.startsWith('reach-level-')) return state.level;
+      // Daily tap tasks use dailyTaps (reset each day)
+      if (taskId.startsWith('daily-tap-')) return state.dailyTaps;
+      // Progress tap tasks use totalTaps (lifetime)
       if (taskId.startsWith('tap-')) return state.totalTaps;
+      if (taskId === 'first-upgrade') {
+        // Check if user has purchased any upgrade
+        return state.upgrades.length > 0 ? 1 : 0;
+      }
+      if (taskId === 'max-upgrade') {
+        // Check if any upgrade is maxed out
+        const hasMaxedUpgrade = state.upgrades.some((userUpgrade) => {
+          const upgrade = UPGRADES.find((u) => u.id === userUpgrade.upgradeId);
+          return upgrade && userUpgrade.level >= upgrade.maxLevel;
+        });
+        return hasMaxedUpgrade ? 1 : 0;
+      }
       return 0;
     },
-    [state.referrals.length, state.level, state.totalTaps]
+    [state.referrals.length, state.level, state.totalTaps, state.dailyTaps, state.upgrades]
   );
 
   // Claim daily reward

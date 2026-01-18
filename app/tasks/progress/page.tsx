@@ -2,31 +2,26 @@
 
 import { useGame } from '@/components/GameProvider';
 import { TaskCard } from '@/components/TaskCard';
-import { DailyRewardCard } from '@/components/DailyReward';
-import { TASKS } from '@/types/game';
+import { getAvailableTasks } from '@/types/game';
 
-export default function AllTasksPage() {
+export default function ProgressTasksPage() {
   const { completeTask, isTaskCompleted, getTaskProgress, isLoaded } = useGame();
 
   if (!isLoaded) {
     return (
       <div className="space-y-3">
-        {[1, 2, 3, 4].map((i) => (
+        {[1, 2, 3].map((i) => (
           <div key={i} className="h-20 w-full bg-secondary/50 rounded-lg animate-pulse" />
         ))}
       </div>
     );
   }
 
-  // Filter tasks: show only if no prerequisite or prerequisite is completed
-  const availableTasks = TASKS.filter(
-    (task) => !task.prerequisite || isTaskCompleted(task.prerequisite)
-  );
+  const progressTasks = getAvailableTasks(['progress', 'referral'], isTaskCompleted);
 
   return (
     <div className="flex flex-col gap-3">
-      <DailyRewardCard />
-      {availableTasks.map((task) => (
+      {progressTasks.map((task) => (
         <TaskCard
           key={task.id}
           task={task}
@@ -35,6 +30,11 @@ export default function AllTasksPage() {
           onComplete={() => completeTask(task.id)}
         />
       ))}
+      {progressTasks.length === 0 && (
+        <div className="mt-12 text-center text-muted-foreground">
+          No progress tasks available
+        </div>
+      )}
     </div>
   );
 }

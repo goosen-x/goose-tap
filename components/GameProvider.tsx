@@ -38,6 +38,8 @@ export function GameProvider({ children }: GameProviderProps) {
           coinsPerHour: gameState.coinsPerHour,
           level: gameState.level,
           totalTaps: gameState.totalTaps,
+          dailyTaps: gameState.dailyTaps,
+          lastDailyTapsReset: gameState.lastDailyTapsReset,
           upgrades: gameState.upgrades,
           tasks: gameState.tasks,
           referrals: gameState.referrals,

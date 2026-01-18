@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useGame } from '@/components/GameProvider';
 import { useTelegram } from '@/hooks/useTelegram';
 import { DailyReward as DailyRewardType, DAILY_REWARDS } from '@/types/game';
-import { formatNumber } from '@/lib/storage';
 import {
   Drawer,
   DrawerContent,
@@ -16,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SlidingNumber } from '@/components/ui/sliding-number';
-import { Gift, Check, Clock, Sparkles } from 'lucide-react';
+import { Gift, Clock, Sparkles } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { GooseIcon } from '@/components/ui/goose-icon';
 import { cn } from '@/lib/utils';
@@ -32,10 +31,34 @@ export function DailyRewardDrawer({ open, onOpenChange }: DailyRewardProps) {
     canClaimDailyReward,
     currentDailyReward,
     claimDailyReward,
+    timeUntilNextDaily,
   } = useGame();
   const { hapticNotification } = useTelegram();
   const [isClaiming, setIsClaiming] = useState(false);
   const [claimedReward, setClaimedReward] = useState<DailyRewardType | null>(null);
+  const [timeLeft, setTimeLeft] = useState(timeUntilNextDaily);
+
+  // Update countdown timer
+  useEffect(() => {
+    if (canClaimDailyReward) return;
+
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => Math.max(0, prev - 1000));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [canClaimDailyReward]);
+
+  // Reset timeLeft when timeUntilNextDaily changes
+  useEffect(() => {
+    setTimeLeft(timeUntilNextDaily);
+  }, [timeUntilNextDaily]);
+
+  const formatTimeLeft = (ms: number) => {
+    const hours = Math.floor(ms / (1000 * 60 * 60));
+    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
+  };
 
   const handleClaim = async () => {
     if (!canClaimDailyReward || isClaiming) return;
@@ -58,12 +81,16 @@ export function DailyRewardDrawer({ open, onOpenChange }: DailyRewardProps) {
     onOpenChange(false);
   };
 
-  // Current day in week cycle (1-7)
-  const currentDay = (dailyStreak % 7) + 1;
   // Days completed this week (based on actual streak)
   const daysCompletedThisWeek = dailyStreak % 7;
   // Handle week completion (streak 7, 14, 21... should show 7 dots)
   const daysCompleted = (daysCompletedThisWeek === 0 && dailyStreak > 0) ? 7 : daysCompletedThisWeek;
+  // Current day display:
+  // - If can claim: show next day to claim (daysCompleted + 1)
+  // - If already claimed: show last completed day (daysCompleted, or 7 if week complete)
+  const currentDay = canClaimDailyReward
+    ? (daysCompleted % 7) + 1
+    : (daysCompleted === 0 ? 1 : daysCompleted);
 
   return (
     <Drawer open={open} onOpenChange={handleClose}>
@@ -171,10 +198,14 @@ export function DailyRewardDrawer({ open, onOpenChange }: DailyRewardProps) {
                     Claim Reward
                   </span>
                 ) : (
-                  <>
+                  <span className="flex items-center">
                     <Clock className="h-4 w-4 mr-2" />
-                    Already Claimed
-                  </>
+                    <SlidingNumber value={Math.floor(timeLeft / (1000 * 60 * 60))} padStart />
+                    <span>:</span>
+                    <SlidingNumber value={Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60))} padStart />
+                    <span>:</span>
+                    <SlidingNumber value={Math.floor((timeLeft % (1000 * 60)) / 1000)} padStart />
+                  </span>
                 )}
               </Button>
             </div>
@@ -209,18 +240,19 @@ export function DailyRewardCard() {
     canClaimDailyReward,
     currentDailyReward,
     timeUntilNextDaily,
-    claimDailyReward,
   } = useGame();
-  const { hapticNotification } = useTelegram();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [timeLeft, setTimeLeft] = useState(timeUntilNextDaily);
-  const [isClaiming, setIsClaiming] = useState(false);
 
-  // Current day in week cycle (1-7)
-  const currentDay = (dailyStreak % 7) + 1;
   // Days completed this week (based on actual streak)
   const daysCompletedThisWeek = dailyStreak % 7;
   const daysCompleted = (daysCompletedThisWeek === 0 && dailyStreak > 0) ? 7 : daysCompletedThisWeek;
+  // Current day display:
+  // - If can claim: show next day to claim (daysCompleted + 1)
+  // - If already claimed: show last completed day
+  const currentDay = canClaimDailyReward
+    ? (daysCompleted % 7) + 1
+    : (daysCompleted === 0 ? 1 : daysCompleted);
 
   // Update countdown timer
   useEffect(() => {
@@ -242,21 +274,6 @@ export function DailyRewardCard() {
     const hours = Math.floor(ms / (1000 * 60 * 60));
     const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
     return `${hours}h ${minutes}m`;
-  };
-
-  const handleClaim = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!canClaimDailyReward || isClaiming) return;
-
-    setIsClaiming(true);
-    const reward = await claimDailyReward();
-
-    if (reward) {
-      hapticNotification('success');
-    } else {
-      hapticNotification('error');
-    }
-    setIsClaiming(false);
   };
 
   return (
@@ -287,28 +304,17 @@ export function DailyRewardCard() {
             +<SlidingNumber value={currentDailyReward.coins} />
           </Badge>
 
-          {canClaimDailyReward ? (
-            <Button
-              size="sm"
-              onClick={handleClaim}
-              disabled={isClaiming}
-              className="cursor-pointer shrink-0"
-            >
-              {isClaiming ? <Spinner /> : 'Claim'}
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={(e) => {
-                e.stopPropagation();
-                setDialogOpen(true);
-              }}
-              className="cursor-pointer shrink-0"
-            >
-              View
-            </Button>
-          )}
+          <Button
+            size="sm"
+            variant={canClaimDailyReward ? 'default' : 'secondary'}
+            onClick={(e) => {
+              e.stopPropagation();
+              setDialogOpen(true);
+            }}
+            className="cursor-pointer shrink-0"
+          >
+            {canClaimDailyReward ? 'Claim' : 'View'}
+          </Button>
         </div>
 
         {/* Row 2: Progress dots, Day counter, Streak/Timer */}

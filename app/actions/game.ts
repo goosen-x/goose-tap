@@ -20,6 +20,7 @@ import {
   calculateLevelFromXP,
   calculateLevelBonuses,
   XP_REWARDS,
+  shouldResetDailyTaps,
 } from '@/types/game'
 
 // Helper functions (duplicated from lib/storage.ts for server-side use)
@@ -157,13 +158,33 @@ export async function loadGame(initData: string): Promise<LoadGameResult> {
       lastOfflineEarnings: Date.now(),
     }
 
+    // Check if daily taps need to be reset (new UTC day)
+    let dailyReset = false
+    if (shouldResetDailyTaps(state.lastDailyTapsReset)) {
+      dailyReset = true
+      // Reset daily taps counter
+      state = {
+        ...state,
+        dailyTaps: 0,
+        lastDailyTapsReset: Date.now(),
+        // Reset daily task completion status (remove claimed status for daily-tap-* tasks)
+        tasks: state.tasks.filter((t) => !t.taskId.startsWith('daily-tap-')),
+      }
+      console.log('[loadGame] Daily taps reset for user:', user.id)
+    }
+
     // Persist to DB so subsequent loads don't recalculate same earnings
-    if (offlineEarnings > 0 || restoredEnergy !== dbUser.energy) {
+    if (offlineEarnings > 0 || restoredEnergy !== dbUser.energy || dailyReset) {
       await updateUserState(user.id, {
         coins: state.coins,
         energy: state.energy,
         lastEnergyUpdate: state.lastEnergyUpdate,
         lastOfflineEarnings: state.lastOfflineEarnings,
+        ...(dailyReset && {
+          dailyTaps: state.dailyTaps,
+          lastDailyTapsReset: state.lastDailyTapsReset,
+          tasks: state.tasks,
+        }),
       })
     }
 
@@ -414,7 +435,9 @@ export async function completeTask(
       return { success: false, error: 'User not found' }
     }
 
+    console.log('[completeTask] dbUser.daily_taps:', dbUser.daily_taps)
     const state = dbRowToGameState(dbUser)
+    console.log('[completeTask] state.dailyTaps:', state.dailyTaps, 'taskId:', taskId)
 
     // Check if task already claimed
     const existingTask = state.tasks.find((t) => t.taskId === taskId)
@@ -440,16 +463,68 @@ export async function completeTask(
       }
     }
 
-    // Check task requirements
-    if (task.type === 'referral' && task.requirement) {
-      if (state.referrals.length < task.requirement) {
-        return { success: false, error: 'Referral requirement not met' }
+    // Check prerequisite task
+    if (task.prerequisite) {
+      const prerequisiteCompleted = state.tasks.find(
+        (t) => t.taskId === task.prerequisite && t.status === 'claimed'
+      )
+      if (!prerequisiteCompleted) {
+        return { success: false, error: 'Complete prerequisite task first' }
       }
     }
 
-    if (task.id === 'reach-level-5' && task.requirement) {
-      if (state.level < task.requirement) {
-        return { success: false, error: 'Level requirement not met' }
+    // Check task requirements based on type and id
+    if (task.requirement) {
+      // Referral tasks
+      if (task.type === 'referral') {
+        if (state.referrals.length < task.requirement) {
+          return { success: false, error: 'Referral requirement not met' }
+        }
+      }
+
+      // Level tasks (reach-level-5, reach-level-10, reach-level-20)
+      if (taskId.startsWith('reach-level-')) {
+        if (state.level < task.requirement) {
+          return { success: false, error: 'Level requirement not met' }
+        }
+      }
+
+      // Progress tap tasks (tap-1000, tap-10000, tap-100000) - use totalTaps
+      if (taskId.startsWith('tap-') && !taskId.startsWith('daily-tap-')) {
+        if (state.totalTaps < task.requirement) {
+          return { success: false, error: 'Tap requirement not met' }
+        }
+      }
+
+      // Daily tap tasks - use dailyTaps
+      if (taskId.startsWith('daily-tap-')) {
+        console.log('[completeTask] Daily tap check:', {
+          taskId,
+          requirement: task.requirement,
+          dailyTaps: state.dailyTaps,
+          passes: state.dailyTaps >= task.requirement
+        })
+        if (state.dailyTaps < task.requirement) {
+          return { success: false, error: 'Daily tap requirement not met' }
+        }
+      }
+
+      // First upgrade task
+      if (taskId === 'first-upgrade') {
+        if (state.upgrades.length === 0) {
+          return { success: false, error: 'Buy an upgrade first' }
+        }
+      }
+
+      // Max upgrade task
+      if (taskId === 'max-upgrade') {
+        const hasMaxedUpgrade = state.upgrades.some((userUpgrade) => {
+          const upgrade = UPGRADES.find((u) => u.id === userUpgrade.upgradeId)
+          return upgrade && userUpgrade.level >= upgrade.maxLevel
+        })
+        if (!hasMaxedUpgrade) {
+          return { success: false, error: 'Max out an upgrade first' }
+        }
       }
     }
 
@@ -471,6 +546,11 @@ export async function completeTask(
       coins: state.coins + task.reward,
       xp: newXP,
       tasks: newTasks,
+    }
+
+    // For daily-tap tasks, update lastDailyTapsReset to prevent reset on next load
+    if (taskId.startsWith('daily-tap-')) {
+      updateData.lastDailyTapsReset = Date.now()
     }
 
     if (newLevel !== state.level) {

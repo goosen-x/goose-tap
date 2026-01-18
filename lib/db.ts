@@ -16,6 +16,8 @@ export interface DbUser {
   coins_per_hour: number;
   level: number;
   total_taps: number;
+  daily_taps: number;
+  last_daily_taps_reset: Date;
   upgrades: UserUpgrade[];
   tasks: UserTask[];
   referrals: Referral[];
@@ -55,6 +57,8 @@ export function dbRowToGameState(row: DbUser): GameState {
     coinsPerHour: row.coins_per_hour,
     level: calculatedLevel,
     totalTaps: row.total_taps || 0,
+    dailyTaps: row.daily_taps || 0,
+    lastDailyTapsReset: row.last_daily_taps_reset ? new Date(row.last_daily_taps_reset).getTime() : Date.now(),
     upgrades: row.upgrades ?? [],
     tasks: row.tasks ?? [],
     referrals: row.referrals ?? [],
@@ -233,6 +237,8 @@ export async function updateUserState(
       coins_per_hour = COALESCE(${state.coinsPerHour ?? null}, coins_per_hour),
       level = COALESCE(${state.level ?? null}, level),
       total_taps = COALESCE(${state.totalTaps ?? null}, total_taps),
+      daily_taps = COALESCE(${state.dailyTaps ?? null}, daily_taps),
+      last_daily_taps_reset = COALESCE(${state.lastDailyTapsReset ? new Date(state.lastDailyTapsReset).toISOString() : null}::timestamp, last_daily_taps_reset),
       upgrades = COALESCE(${state.upgrades ? JSON.stringify(state.upgrades) : null}::jsonb, upgrades),
       tasks = COALESCE(${state.tasks ? JSON.stringify(state.tasks) : null}::jsonb, tasks),
       last_energy_update = COALESCE(${state.lastEnergyUpdate ? new Date(state.lastEnergyUpdate).toISOString() : null}::timestamp, last_energy_update),
@@ -257,7 +263,9 @@ export async function atomicTap(
       xp = xp + ${xpPerTap},
       energy = energy - 1,
       total_taps = total_taps + 1,
+      daily_taps = daily_taps + 1,
       last_energy_update = NOW(),
+      last_daily_taps_reset = NOW(),
       updated_at = NOW()
     WHERE telegram_id = ${telegramId}
       AND energy > 0
@@ -287,7 +295,9 @@ export async function atomicBatchTap(
         xp = xp + ${taps * xpPerTap},
         energy = energy - ${taps},
         total_taps = total_taps + ${taps},
+        daily_taps = daily_taps + ${taps},
         last_energy_update = NOW(),
+        last_daily_taps_reset = NOW(),
         updated_at = NOW()
       WHERE telegram_id = ${telegramId} AND energy >= ${taps}
       RETURNING *

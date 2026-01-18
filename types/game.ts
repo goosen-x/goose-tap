@@ -42,7 +42,7 @@ export interface UserUpgrade {
 }
 
 // Task types
-export type TaskType = 'social' | 'daily' | 'referral';
+export type TaskType = 'social' | 'daily' | 'referral' | 'progress';
 export type TaskStatus = 'pending' | 'completed' | 'claimed';
 
 export interface Task {
@@ -128,6 +128,11 @@ export const LEVELS: Level[] = [
   { level: 13, xpRequired: 1200000, title: 'Immortal', bonus: { passiveIncomeMultiplier: 1.20 } },
   { level: 14, xpRequired: 2000000, title: 'Goose King', bonus: { coinsPerTap: 10, maxEnergy: 500 } },
   { level: 15, xpRequired: 5000000, title: 'Goose God', bonus: { passiveIncomeMultiplier: 1.50, coinsPerTap: 20 } },
+  { level: 16, xpRequired: 8000000, title: 'Celestial', bonus: { maxEnergy: 750, coinsPerTap: 25 } },
+  { level: 17, xpRequired: 12000000, title: 'Eternal', bonus: { passiveIncomeMultiplier: 1.75 } },
+  { level: 18, xpRequired: 18000000, title: 'Transcendent', bonus: { coinsPerTap: 35, maxEnergy: 1000 } },
+  { level: 19, xpRequired: 27000000, title: 'Omnipotent', bonus: { passiveIncomeMultiplier: 2.0, coinsPerTap: 50 } },
+  { level: 20, xpRequired: 40000000, title: 'Ultimate Goose', bonus: { coinsPerTap: 100, maxEnergy: 2000, passiveIncomeMultiplier: 2.5 } },
 ];
 
 // XP rewards
@@ -166,6 +171,8 @@ export interface GameState {
   coinsPerHour: number;
   level: number;
   totalTaps: number;
+  dailyTaps: number;
+  lastDailyTapsReset: number;
   upgrades: UserUpgrade[];
   tasks: UserTask[];
   referrals: Referral[];
@@ -186,6 +193,8 @@ export const DEFAULT_GAME_STATE: GameState = {
   coinsPerHour: 0,
   level: 1,
   totalTaps: 0,
+  dailyTaps: 0,
+  lastDailyTapsReset: Date.now(),
   upgrades: [],
   tasks: [],
   referrals: [],
@@ -274,7 +283,7 @@ export const UPGRADES: Upgrade[] = [
 
 // Task definitions
 export const TASKS: Task[] = [
-  // Social tasks
+  // Social tasks (one-time subscriptions)
   {
     id: 'subscribe-gooselabs',
     type: 'social',
@@ -285,26 +294,25 @@ export const TASKS: Task[] = [
     channelId: '@gooselabs',
     icon: '📢',
   },
+  // Referral tasks (one-time achievements)
   {
-    id: 'join-group',
-    type: 'social',
-    title: 'Join Telegram group',
-    description: 'Join our community chat',
-    reward: 3000,
-    action: 'https://t.me/goosetap_chat',
-    channelId: '@goosetap_chat',
-    icon: '💬',
+    id: 'invite-1-friend',
+    type: 'referral',
+    title: 'Invite first friend',
+    description: 'Share the game',
+    reward: 5000,
+    requirement: 1,
+    icon: '👥',
   },
-
-  // Referral tasks
   {
     id: 'invite-3-friends',
     type: 'referral',
     title: 'Invite 3 friends',
-    description: 'Get friends to join the game',
+    description: 'Get friends to join',
     reward: 10000,
     requirement: 3,
     icon: '👥',
+    prerequisite: 'invite-1-friend',
   },
   {
     id: 'invite-10-friends',
@@ -316,30 +324,90 @@ export const TASKS: Task[] = [
     icon: '👥',
     prerequisite: 'invite-3-friends',
   },
-
-  // Progress tasks
   {
-    id: 'reach-level-5',
-    type: 'daily',
-    title: 'Reach level 5',
-    description: 'Level up your goose',
-    reward: 5000,
-    requirement: 5,
+    id: 'invite-25-friends',
+    type: 'referral',
+    title: 'Invite 25 friends',
+    description: 'Network master',
+    reward: 100000,
+    requirement: 25,
+    icon: '👥',
+    prerequisite: 'invite-10-friends',
+  },
+  {
+    id: 'invite-50-friends',
+    type: 'referral',
+    title: 'Invite 50 friends',
+    description: 'Influencer status',
+    reward: 200000,
+    requirement: 50,
+    icon: '👥',
+    prerequisite: 'invite-25-friends',
+  },
+  {
+    id: 'invite-100-friends',
+    type: 'referral',
+    title: 'Invite 100 friends',
+    description: 'Legendary recruiter',
+    reward: 500000,
+    requirement: 100,
+    icon: '👥',
+    prerequisite: 'invite-50-friends',
+  },
+
+  // Progress tasks (one-time milestones) - Level achievements
+  {
+    id: 'reach-level-3',
+    type: 'progress',
+    title: 'Reach level 3',
+    description: 'First steps',
+    reward: 2000,
+    requirement: 3,
     icon: '⭐',
   },
   {
+    id: 'reach-level-5',
+    type: 'progress',
+    title: 'Reach level 5',
+    description: 'Skilled tapper',
+    reward: 5000,
+    requirement: 5,
+    icon: '⭐',
+    prerequisite: 'reach-level-3',
+  },
+  {
     id: 'reach-level-10',
-    type: 'daily',
+    type: 'progress',
     title: 'Reach level 10',
-    description: 'Become a pro tapper',
-    reward: 15000,
+    description: 'Legend status',
+    reward: 25000,
     requirement: 10,
     icon: '⭐',
     prerequisite: 'reach-level-5',
   },
   {
+    id: 'reach-level-15',
+    type: 'progress',
+    title: 'Reach level 15',
+    description: 'Goose God',
+    reward: 75000,
+    requirement: 15,
+    icon: '⭐',
+    prerequisite: 'reach-level-10',
+  },
+  {
+    id: 'reach-level-20',
+    type: 'progress',
+    title: 'Reach level 20',
+    description: 'Ultimate Goose',
+    reward: 200000,
+    requirement: 20,
+    icon: '⭐',
+    prerequisite: 'reach-level-15',
+  },
+  {
     id: 'tap-1000',
-    type: 'daily',
+    type: 'progress',
     title: 'Tap 1,000 times',
     description: 'Get tapping!',
     reward: 2000,
@@ -348,13 +416,112 @@ export const TASKS: Task[] = [
   },
   {
     id: 'tap-10000',
-    type: 'daily',
+    type: 'progress',
     title: 'Tap 10,000 times',
     description: 'Tap master',
     reward: 10000,
     requirement: 10000,
     icon: '👆',
     prerequisite: 'tap-1000',
+  },
+  {
+    id: 'tap-100000',
+    type: 'progress',
+    title: 'Tap 100,000 times',
+    description: 'Ultimate tapper',
+    reward: 25000,
+    requirement: 100000,
+    icon: '👆',
+    prerequisite: 'tap-10000',
+  },
+  {
+    id: 'first-upgrade',
+    type: 'progress',
+    title: 'First upgrade',
+    description: 'Buy your first upgrade',
+    reward: 2000,
+    requirement: 1,
+    icon: '🔧',
+  },
+  {
+    id: 'max-upgrade',
+    type: 'progress',
+    title: 'Max out an upgrade',
+    description: 'Reach max level on any upgrade',
+    reward: 20000,
+    requirement: 1,
+    icon: '🏆',
+  },
+
+  // Daily tap chain (only next uncompleted shows)
+  {
+    id: 'daily-tap-100',
+    type: 'daily',
+    title: 'Tap 100 times',
+    description: 'Daily warm-up',
+    reward: 500,
+    requirement: 100,
+    icon: '🎯',
+  },
+  {
+    id: 'daily-tap-250',
+    type: 'daily',
+    title: 'Tap 250 times',
+    description: 'Getting started',
+    reward: 1000,
+    requirement: 250,
+    icon: '🎯',
+    prerequisite: 'daily-tap-100',
+  },
+  {
+    id: 'daily-tap-500',
+    type: 'daily',
+    title: 'Tap 500 times',
+    description: 'Casual player',
+    reward: 1500,
+    requirement: 500,
+    icon: '🎯',
+    prerequisite: 'daily-tap-250',
+  },
+  {
+    id: 'daily-tap-1000',
+    type: 'daily',
+    title: 'Tap 1,000 times',
+    description: 'Active player',
+    reward: 2500,
+    requirement: 1000,
+    icon: '🎯',
+    prerequisite: 'daily-tap-500',
+  },
+  {
+    id: 'daily-tap-2500',
+    type: 'daily',
+    title: 'Tap 2,500 times',
+    description: 'Dedicated player',
+    reward: 5000,
+    requirement: 2500,
+    icon: '🎯',
+    prerequisite: 'daily-tap-1000',
+  },
+  {
+    id: 'daily-tap-5000',
+    type: 'daily',
+    title: 'Tap 5,000 times',
+    description: 'Hardcore player',
+    reward: 10000,
+    requirement: 5000,
+    icon: '🎯',
+    prerequisite: 'daily-tap-2500',
+  },
+  {
+    id: 'daily-tap-10000',
+    type: 'daily',
+    title: 'Tap 10,000 times',
+    description: 'Ultra grinder',
+    reward: 25000,
+    requirement: 10000,
+    icon: '🎯',
+    prerequisite: 'daily-tap-5000',
   },
 ];
 
@@ -470,4 +637,32 @@ export function getTimeUntilNextDaily(lastClaim: number | null): number {
 
   const now = Date.now();
   return Math.max(0, nextClaimDate.getTime() - now);
+}
+
+// Check if daily taps should be reset (new UTC day)
+export function shouldResetDailyTaps(lastReset: number): boolean {
+  const now = Date.now();
+  const lastResetDate = new Date(lastReset);
+  const today = new Date(now);
+
+  // Reset to start of day (UTC)
+  lastResetDate.setUTCHours(0, 0, 0, 0);
+  today.setUTCHours(0, 0, 0, 0);
+
+  // Should reset if it's a new day
+  return today.getTime() > lastResetDate.getTime();
+}
+
+// Filter tasks to show only next uncompleted in chain
+// For chains with prerequisites, only shows task if prerequisite completed and task not completed
+export function getAvailableTasks(
+  types: TaskType[],
+  isTaskCompleted: (taskId: string) => boolean
+): Task[] {
+  return TASKS.filter(
+    (task) =>
+      types.includes(task.type) &&
+      !isTaskCompleted(task.id) &&
+      (!task.prerequisite || isTaskCompleted(task.prerequisite))
+  );
 }

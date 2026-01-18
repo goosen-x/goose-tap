@@ -2,7 +2,7 @@
 
 import { useGame } from '@/components/GameProvider';
 import { TaskCard } from '@/components/TaskCard';
-import { TASKS } from '@/types/game';
+import { getAvailableTasks } from '@/types/game';
 
 export default function SocialTasksPage() {
   const { completeTask, isTaskCompleted, getTaskProgress, isLoaded } = useGame();
@@ -17,12 +17,7 @@ export default function SocialTasksPage() {
     );
   }
 
-  // Filter by type and prerequisite
-  const socialTasks = TASKS.filter(
-    (task) =>
-      task.type === 'social' &&
-      (!task.prerequisite || isTaskCompleted(task.prerequisite))
-  );
+  const socialTasks = getAvailableTasks(['social'], isTaskCompleted);
 
   return (
     <div className="flex flex-col gap-3">
