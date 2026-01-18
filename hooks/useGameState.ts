@@ -195,6 +195,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
             energy: newEnergy,
             lastEnergyUpdate: Date.now(),
           };
+          stateRef.current = newState;
           saveGameState(newState);
           return newState;
         }
@@ -222,6 +223,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
           const wholeCoins = Math.floor(accumulatedCoins.current);
           accumulatedCoins.current -= wholeCoins;
           const newState = { ...prev, coins: prev.coins + wholeCoins };
+          stateRef.current = newState;
           saveGameState(newState);
           return newState;
         }
@@ -311,6 +313,8 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
         totalTaps: newTotalTaps,
         ...stats,
       };
+      // Update ref immediately for reliable sendBeacon
+      stateRef.current = newState;
       saveGameState(newState);
       return newState;
     });
@@ -393,7 +397,10 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
       ...stats,
     };
 
-    // Update local state immediately for responsive UI
+    // Update ref IMMEDIATELY (before setState) for reliable sendBeacon on close
+    stateRef.current = optimisticState;
+
+    // Update local state for UI
     setState(optimisticState);
     saveGameState(optimisticState);
 
@@ -457,7 +464,10 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
       ...stats,
     };
 
-    // Update local state immediately for responsive UI
+    // Update ref IMMEDIATELY (before setState) for reliable sendBeacon on close
+    stateRef.current = optimisticState;
+
+    // Update local state for UI
     setState(optimisticState);
     saveGameState(optimisticState);
 
@@ -505,6 +515,7 @@ export function useGameState(options: UseGameStateOptions): UseGameStateResult {
         level: newLevel,
         ...stats,
       };
+      stateRef.current = newState;
       saveGameState(newState);
       return newState;
     });
