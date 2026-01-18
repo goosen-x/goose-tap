@@ -8,6 +8,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme="dark"
       className="toaster group"
+      position="top-center"
       icons={{
         success: (
           <CircleCheckIcon className="size-4" />
@@ -34,6 +35,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--success-text": "hsl(142 76% 36%)",
           "--success-border": "hsl(var(--border))",
           "--border-radius": "var(--radius)",
+          "--offset": "calc(var(--safe-area-top, 0px) + 1rem)",
         } as React.CSSProperties
       }
       toastOptions={{
