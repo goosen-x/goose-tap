@@ -667,12 +667,12 @@ function isChainTask(taskId: string): boolean {
 
 // Filter tasks to show:
 // - Uncompleted tasks (if prerequisites met)
-// - Completed tasks (only if NOT part of a chain)
+// - Completed tasks (only if NOT part of a chain) - shown at bottom
 export function getAvailableTasks(
   types: TaskType[],
   isTaskCompleted: (taskId: string) => boolean
 ): Task[] {
-  return TASKS.filter((task) => {
+  const filtered = TASKS.filter((task) => {
     // Must be of requested type
     if (!types.includes(task.type)) return false;
 
@@ -687,5 +687,13 @@ export function getAvailableTasks(
 
     // Uncompleted tasks: show only if prerequisite is met
     return !task.prerequisite || isTaskCompleted(task.prerequisite);
+  });
+
+  // Sort: uncompleted first, completed at bottom
+  return filtered.sort((a, b) => {
+    const aCompleted = isTaskCompleted(a.id);
+    const bCompleted = isTaskCompleted(b.id);
+    if (aCompleted === bCompleted) return 0;
+    return aCompleted ? 1 : -1;
   });
 }
