@@ -118,6 +118,11 @@ interface TelegramWebApp {
   requestFullscreen?: () => void;
   exitFullscreen?: () => void;
 
+  // Vertical swipes (Bot API 7.7+)
+  isVerticalSwipesEnabled?: boolean;
+  enableVerticalSwipes?: () => void;
+  disableVerticalSwipes?: () => void;
+
   isVersionAtLeast: (version: string) => boolean;
   setHeaderColor: (color: 'bg_color' | 'secondary_bg_color' | string) => void;
   setBackgroundColor: (color: 'bg_color' | 'secondary_bg_color' | string) => void;

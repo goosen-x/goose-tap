@@ -104,6 +104,12 @@ export function useTelegram() {
     if (tg) {
       tg.ready();
       tg.expand();
+
+      // Disable vertical swipes to prevent collapse and ensure full height (Bot API 7.7+)
+      if (tg.disableVerticalSwipes) {
+        tg.disableVerticalSwipes();
+      }
+
       isInitialized = true;
     }
   }, []);
