@@ -104,13 +104,6 @@ export function useTelegram() {
     if (tg) {
       tg.ready();
       tg.expand();
-
-      // Request fullscreen for v8.0+ when opened from inline/menu buttons
-      // (Main Mini App and direct links open fullscreen by default)
-      if (tg.requestFullscreen && !tg.isFullscreen) {
-        tg.requestFullscreen();
-      }
-
       isInitialized = true;
     }
   }, []);
