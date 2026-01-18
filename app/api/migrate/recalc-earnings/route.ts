@@ -41,7 +41,7 @@ export async function GET() {
 
     let updated = 0;
     let totalRecalculated = 0;
-    const debugUsers: Array<{ id: string; coins: number; spent: number; total: number }> = [];
+    const debugUsers: Array<{ id: string; coins: number; spent: number; total: number; actualWritten?: number }> = [];
 
     for (const user of users) {
       // Calculate total spent on upgrades
