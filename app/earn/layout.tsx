@@ -15,8 +15,9 @@ import {
 } from '@/components/ui/drawer';
 import { formatCompact } from '@/lib/storage';
 import { cn } from '@/lib/utils';
-import { Layers, Rocket, Star, Zap, Clock, Battery, ChevronRight, Check, Lock } from 'lucide-react';
+import { Layers, Rocket, Star, Zap, ChevronRight, Check, Lock } from 'lucide-react';
 import { LEVELS, XP_REWARDS } from '@/types/game';
+import { XpIcon } from '@/components/icons/XpIcon';
 
 interface TabLink {
   href: string;
@@ -75,48 +76,33 @@ function EarnHeader() {
         className="p-3 space-y-2 cursor-pointer active:scale-[0.98] transition-all hover:border-primary/50"
         onClick={() => setDrawerOpen(true)}
       >
-        {/* Row 1: Level + Progress + XP */}
-        <div className="flex items-center gap-3 text-sm">
-          {/* Level */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <Star className="w-4 h-4 text-yellow-500" />
-            <span className="font-medium">Lvl {levelData.level}</span>
-            <span className="text-muted-foreground">·</span>
-            <span className="text-muted-foreground text-xs">{levelData.title}</span>
+        {/* Row 1: Level title + XP + Progress */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-lg">
+              <span className="font-semibold">Level {levelData.level}</span>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-muted-foreground">{levelData.title}</span>
+            </div>
+            <span className="text-sm text-muted-foreground flex items-center">
+              {formatCompact(xp)}/{nextLevelData ? formatCompact(nextLevelData.xpRequired) : 'MAX'} <XpIcon className="w-4 h-4" />
+            </span>
           </div>
+          <Progress value={levelProgress} className="h-2" />
+        </div>
 
-          {/* Progress */}
-          <Progress value={levelProgress} className="h-1.5 flex-1" />
-
-          {/* XP */}
-          <span className="text-xs text-muted-foreground shrink-0">
-            {formatCompact(xp)}/{nextLevelData ? formatCompact(nextLevelData.xpRequired) : 'MAX'}
+        {/* Row 3: Next bonus + Button */}
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs text-muted-foreground flex-1">
+            {nextLevelData
+              ? `Next: ${formatBonusShort(nextLevelData.bonus)} at Lvl ${nextLevelData.level}`
+              : 'Max level!'
+            }
           </span>
-        </div>
-
-        {/* Row 2: Stats with dividers */}
-        <div className="flex items-center text-xs divide-x divide-border">
-          <div className="flex-1 flex items-center justify-center gap-1 py-1">
-            <Zap className="w-3.5 h-3.5 text-yellow-400" />
-            <span className="font-medium">+{formatCompact(coinsPerTap)}</span>
-            <span className="text-muted-foreground">/tap</span>
+          <div className="py-1 px-2.5 rounded-md bg-primary/10 text-primary text-xs font-medium flex items-center gap-0.5">
+            Details
+            <ChevronRight className="w-3.5 h-3.5" />
           </div>
-          <div className="flex-1 flex items-center justify-center gap-1 py-1">
-            <Clock className="w-3.5 h-3.5 text-blue-400" />
-            <span className="font-medium">+{formatCompact(coinsPerHour)}</span>
-            <span className="text-muted-foreground">/hr</span>
-          </div>
-          <div className="flex-1 flex items-center justify-center gap-1 py-1">
-            <Battery className="w-3.5 h-3.5 text-green-400" />
-            <span className="font-medium">{formatCompact(maxEnergy)}</span>
-            <span className="text-muted-foreground">max</span>
-          </div>
-        </div>
-
-        {/* Row 3: Call to action */}
-        <div className="flex items-center justify-center gap-1 text-xs text-primary pt-1 border-t border-border">
-          <span>View level details</span>
-          <ChevronRight className="w-3.5 h-3.5" />
         </div>
       </Card>
 
@@ -126,7 +112,7 @@ function EarnHeader() {
           <DrawerHeader>
             <DrawerTitle className="flex items-center gap-2">
               <Star className="w-5 h-5 text-yellow-500" />
-              Levels & XP
+              Levels & <XpIcon className="w-5 h-5 inline-block" />
             </DrawerTitle>
             <DrawerDescription>
               Level up to unlock bonuses
@@ -140,14 +126,14 @@ function EarnHeader() {
                 <span className="font-medium">
                   Level {levelData.level} — {levelData.title}
                 </span>
-                <span className="text-muted-foreground">
-                  {formatCompact(xp)} / {nextLevelData ? formatCompact(nextLevelData.xpRequired) : 'MAX'} XP
+                <span className="text-muted-foreground flex items-center gap-1">
+                  {formatCompact(xp)} / {nextLevelData ? formatCompact(nextLevelData.xpRequired) : 'MAX'} <XpIcon className="w-3.5 h-3.5" />
                 </span>
               </div>
               <Progress value={levelProgress} className="h-2" />
               {nextLevelData && (
-                <p className="text-xs text-muted-foreground">
-                  {formatCompact(nextLevelData.xpRequired - xp)} XP to Level {nextLevelData.level}
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  {formatCompact(nextLevelData.xpRequired - xp)} <XpIcon className="w-3 h-3" /> to Level {nextLevelData.level}
                 </p>
               )}
             </div>
@@ -166,7 +152,7 @@ function EarnHeader() {
 
             {/* How to Earn XP */}
             <div className="space-y-2">
-              <h4 className="text-sm font-medium">How to earn XP</h4>
+              <h4 className="text-sm font-medium flex items-center gap-1.5">How to earn <XpIcon className="w-4 h-4" /></h4>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="rounded-lg bg-muted/50 p-2.5 flex items-center gap-2">
                   <div className="w-6 h-6 rounded-full bg-yellow-500/20 flex items-center justify-center">
@@ -174,7 +160,7 @@ function EarnHeader() {
                   </div>
                   <div>
                     <p className="font-medium">Tap</p>
-                    <p className="text-muted-foreground">+{XP_REWARDS.tap} XP</p>
+                    <p className="text-muted-foreground flex items-center gap-0.5">+{XP_REWARDS.tap} <XpIcon className="w-3 h-3" /></p>
                   </div>
                 </div>
                 <div className="rounded-lg bg-muted/50 p-2.5 flex items-center gap-2">
@@ -183,7 +169,7 @@ function EarnHeader() {
                   </div>
                   <div>
                     <p className="font-medium">Upgrade</p>
-                    <p className="text-muted-foreground">+{XP_REWARDS.upgrade}×lvl XP</p>
+                    <p className="text-muted-foreground flex items-center gap-0.5">+{XP_REWARDS.upgrade}×lvl <XpIcon className="w-3 h-3" /></p>
                   </div>
                 </div>
                 <div className="rounded-lg bg-muted/50 p-2.5 flex items-center gap-2">
@@ -192,7 +178,7 @@ function EarnHeader() {
                   </div>
                   <div>
                     <p className="font-medium">Task</p>
-                    <p className="text-muted-foreground">+{XP_REWARDS.task} XP</p>
+                    <p className="text-muted-foreground flex items-center gap-0.5">+{XP_REWARDS.task} <XpIcon className="w-3 h-3" /></p>
                   </div>
                 </div>
                 <div className="rounded-lg bg-muted/50 p-2.5 flex items-center gap-2">
@@ -201,7 +187,7 @@ function EarnHeader() {
                   </div>
                   <div>
                     <p className="font-medium">Referral</p>
-                    <p className="text-muted-foreground">+{formatCompact(XP_REWARDS.referral)} XP</p>
+                    <p className="text-muted-foreground flex items-center gap-0.5">+{formatCompact(XP_REWARDS.referral)} <XpIcon className="w-3 h-3" /></p>
                   </div>
                 </div>
               </div>
@@ -251,8 +237,8 @@ function EarnHeader() {
                       </div>
 
                       {/* XP required */}
-                      <span className="text-muted-foreground shrink-0">
-                        {formatCompact(level.xpRequired)} XP
+                      <span className="text-muted-foreground shrink-0 flex items-center gap-0.5">
+                        {formatCompact(level.xpRequired)} <XpIcon className="w-3 h-3" />
                       </span>
                     </div>
                   );

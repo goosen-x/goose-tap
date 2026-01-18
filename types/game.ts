@@ -653,16 +653,39 @@ export function shouldResetDailyTaps(lastReset: number): boolean {
   return today.getTime() > lastResetDate.getTime();
 }
 
-// Filter tasks to show only next uncompleted in chain
-// For chains with prerequisites, only shows task if prerequisite completed and task not completed
+// Check if a task is part of a chain (has prerequisite or is a prerequisite for another task)
+function isChainTask(taskId: string): boolean {
+  const task = TASKS.find(t => t.id === taskId);
+  if (!task) return false;
+
+  // Has a prerequisite = part of a chain
+  if (task.prerequisite) return true;
+
+  // Is referenced as prerequisite by another task = start of a chain
+  return TASKS.some(t => t.prerequisite === taskId);
+}
+
+// Filter tasks to show:
+// - Uncompleted tasks (if prerequisites met)
+// - Completed tasks (only if NOT part of a chain)
 export function getAvailableTasks(
   types: TaskType[],
   isTaskCompleted: (taskId: string) => boolean
 ): Task[] {
-  return TASKS.filter(
-    (task) =>
-      types.includes(task.type) &&
-      !isTaskCompleted(task.id) &&
-      (!task.prerequisite || isTaskCompleted(task.prerequisite))
-  );
+  return TASKS.filter((task) => {
+    // Must be of requested type
+    if (!types.includes(task.type)) return false;
+
+    const completed = isTaskCompleted(task.id);
+    const isChain = isChainTask(task.id);
+
+    // Completed chain tasks: hide
+    if (completed && isChain) return false;
+
+    // Completed non-chain tasks: show
+    if (completed && !isChain) return true;
+
+    // Uncompleted tasks: show only if prerequisite is met
+    return !task.prerequisite || isTaskCompleted(task.prerequisite);
+  });
 }

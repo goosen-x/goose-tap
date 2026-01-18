@@ -18,6 +18,7 @@ import { SlidingNumber } from '@/components/ui/sliding-number';
 import { Gift, Clock, Sparkles } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { GooseIcon } from '@/components/ui/goose-icon';
+import { XpIcon } from '@/components/icons/XpIcon';
 import { cn } from '@/lib/utils';
 
 interface DailyRewardProps {
@@ -121,7 +122,7 @@ export function DailyRewardDrawer({ open, onOpenChange }: DailyRewardProps) {
                   +<SlidingNumber value={claimedReward.coins} />
                 </span>
                 <span className="text-muted-foreground flex items-center gap-1">
-                  +<SlidingNumber value={claimedReward.xp} /> XP
+                  +<SlidingNumber value={claimedReward.xp} /> <XpIcon className="w-4 h-4" />
                 </span>
               </div>
               {claimedReward.bonus && (
@@ -146,8 +147,8 @@ export function DailyRewardDrawer({ open, onOpenChange }: DailyRewardProps) {
                   <GooseIcon className="h-8 w-8" />
                   <SlidingNumber value={currentDailyReward.coins} />
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  +{currentDailyReward.xp} XP
+                <p className="text-sm text-muted-foreground mt-1 flex items-center justify-center gap-1">
+                  +{currentDailyReward.xp} <XpIcon className="w-4 h-4" />
                 </p>
               </Card>
 
