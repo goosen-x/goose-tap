@@ -99,10 +99,10 @@ export default function LeaderboardPage() {
                 <span className="text-2xl font-bold">#{currentUser.rank}</span>
               </div>
               <div className="text-right">
-                <p className="text-sm text-muted-foreground">Your Coins</p>
-                {/* Dynamic: real-time coins from local state */}
+                <p className="text-sm text-muted-foreground">Total Earned</p>
+                {/* Total earnings from API */}
                 <span className="text-lg font-semibold flex items-center justify-end">
-                  <SlidingNumber value={coins} />
+                  <SlidingNumber value={currentUser.coins} />
                 </span>
               </div>
             </div>
@@ -166,14 +166,10 @@ export default function LeaderboardPage() {
           <div className="flex flex-col gap-2">
             {entries.map((entry) => {
               const isCurrentUser = entry.telegramId === user?.id;
-              // Only current user gets real-time coin/level updates
-              const displayEntry = isCurrentUser
-                ? { ...entry, coins, level }
-                : entry;
               return (
                 <LeaderboardCard
                   key={entry.telegramId}
-                  entry={displayEntry}
+                  entry={entry}
                   isCurrentUser={isCurrentUser}
                 />
               );

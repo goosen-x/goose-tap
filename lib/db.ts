@@ -232,10 +232,18 @@ export async function updateUserState(
   telegramId: number,
   state: Partial<GameState>
 ): Promise<DbUser> {
+  // DEBUG: Log when updateUserState is called
+  if (telegramId === 204887498) {
+    console.log('[DEBUG updateUserState] Called for user 204887498 with state keys:', Object.keys(state));
+    if ('totalEarnings' in state) {
+      console.log('[DEBUG updateUserState] WARNING: totalEarnings in state:', state.totalEarnings);
+    }
+  }
+  // NOTE: total_earnings is NOT updated here - it should only increase via atomic operations
+  // (tap, batch tap, task rewards, daily rewards, etc.)
   const { rows } = await sql<DbUser>`
     UPDATE users SET
       coins = COALESCE(${state.coins ?? null}, coins),
-      total_earnings = COALESCE(${state.totalEarnings ?? null}, total_earnings),
       xp = COALESCE(${state.xp ?? null}, xp),
       energy = COALESCE(${state.energy ?? null}, energy),
       max_energy = COALESCE(${state.maxEnergy ?? null}, max_energy),
@@ -346,6 +354,23 @@ export async function atomicBatchTap(
 export async function getUser(telegramId: number): Promise<DbUser | null> {
   const { rows } = await sql<DbUser>`
     SELECT * FROM users WHERE telegram_id = ${telegramId}
+  `;
+
+  return rows[0] ?? null;
+}
+
+// Atomic add coins and total_earnings (for task rewards, daily rewards, etc.)
+export async function atomicAddCoins(
+  telegramId: number,
+  amount: number
+): Promise<DbUser | null> {
+  const { rows } = await sql<DbUser>`
+    UPDATE users SET
+      coins = coins + ${amount},
+      total_earnings = total_earnings + ${amount},
+      updated_at = NOW()
+    WHERE telegram_id = ${telegramId}
+    RETURNING *
   `;
 
   return rows[0] ?? null;

@@ -32,8 +32,8 @@ export async function GET() {
   try {
     // Get all users with their upgrades and coins
     const { rows: users } = await sql<{
-      telegram_id: number;
-      coins: number;
+      telegram_id: string;
+      coins: string;
       upgrades: UserUpgrade[] | null;
     }>`
       SELECT telegram_id, coins, upgrades FROM users
@@ -41,6 +41,7 @@ export async function GET() {
 
     let updated = 0;
     let totalRecalculated = 0;
+    const debugUsers: Array<{ id: string; coins: number; spent: number; total: number }> = [];
 
     for (const user of users) {
       // Calculate total spent on upgrades
@@ -52,14 +53,31 @@ export async function GET() {
       }
 
       // New total_earnings = current coins + spent on upgrades
-      const newTotalEarnings = Number(user.coins) + totalSpentOnUpgrades;
+      const coinsNum = Number(user.coins);
+      const newTotalEarnings = coinsNum + totalSpentOnUpgrades;
+
+      // Debug log for specific user
+      if (user.telegram_id === '204887498') {
+        debugUsers.push({
+          id: user.telegram_id,
+          coins: coinsNum,
+          spent: totalSpentOnUpgrades,
+          total: newTotalEarnings,
+        });
+      }
 
       // Update user
-      await sql`
+      const { rows: updateResult } = await sql<{ total_earnings: number }>`
         UPDATE users
         SET total_earnings = ${newTotalEarnings}
         WHERE telegram_id = ${user.telegram_id}
+        RETURNING total_earnings
       `;
+
+      // Debug: verify write for specific user
+      if (user.telegram_id === '204887498') {
+        debugUsers[0].actualWritten = updateResult[0]?.total_earnings;
+      }
 
       updated++;
       totalRecalculated += newTotalEarnings;
@@ -72,6 +90,7 @@ export async function GET() {
         usersUpdated: updated,
         totalEarningsSum: totalRecalculated,
       },
+      debug: debugUsers,
     });
   } catch (error) {
     console.error('Recalculation error:', error);

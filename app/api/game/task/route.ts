@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { validateInitDataWithDevFallback } from '@/lib/telegram-auth';
-import { getUser, updateUserState, dbRowToGameState } from '@/lib/db';
+import { getUser, updateUserState, atomicAddCoins, dbRowToGameState } from '@/lib/db';
 import {
   TASKS,
   UserTask,
@@ -125,10 +125,11 @@ export async function POST(request: Request) {
     const newXP = state.xp + XP_REWARDS.task;
     const newLevel = calculateLevelFromXP(newXP);
 
-    // Check if level changed and recalculate stats
+    // Atomically add coins and total_earnings
+    await atomicAddCoins(user.id, task.reward);
+
+    // Update other state (XP, tasks, level)
     let updateData: Parameters<typeof updateUserState>[1] = {
-      coins: state.coins + task.reward,
-      totalEarnings: state.totalEarnings + task.reward,
       xp: newXP,
       tasks: newTasks,
     };
@@ -150,7 +151,7 @@ export async function POST(request: Request) {
       };
     }
 
-    // Update user state with reward and XP
+    // Update user state with XP and tasks
     const updatedUser = await updateUserState(user.id, updateData);
 
     return NextResponse.json({

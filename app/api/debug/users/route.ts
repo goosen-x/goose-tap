@@ -10,13 +10,14 @@ export async function GET() {
         username,
         first_name,
         coins,
+        total_earnings,
         level,
         referred_by,
         referrals,
         created_at
       FROM users
-      ORDER BY created_at DESC
-      LIMIT 20
+      ORDER BY COALESCE(total_earnings, 0) DESC
+      LIMIT 50
     `
 
     const users = rows.map(row => ({
@@ -24,6 +25,7 @@ export async function GET() {
       username: row.username,
       firstName: row.first_name,
       coins: row.coins,
+      totalEarnings: row.total_earnings,
       level: row.level,
       referredBy: row.referred_by,
       referralsCount: Array.isArray(row.referrals) ? row.referrals.length : 0,
