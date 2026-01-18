@@ -56,6 +56,8 @@ export interface Task {
   icon: string;
   /** Channel/group ID for subscription verification */
   channelId?: string;
+  /** Task ID that must be completed before this task appears */
+  prerequisite?: string;
 }
 
 export interface UserTask {
@@ -312,6 +314,7 @@ export const TASKS: Task[] = [
     reward: 50000,
     requirement: 10,
     icon: '👥',
+    prerequisite: 'invite-3-friends',
   },
 
   // Progress tasks
@@ -332,6 +335,7 @@ export const TASKS: Task[] = [
     reward: 15000,
     requirement: 10,
     icon: '⭐',
+    prerequisite: 'reach-level-5',
   },
   {
     id: 'tap-1000',
@@ -350,6 +354,7 @@ export const TASKS: Task[] = [
     reward: 10000,
     requirement: 10000,
     icon: '👆',
+    prerequisite: 'tap-1000',
   },
 ];
 

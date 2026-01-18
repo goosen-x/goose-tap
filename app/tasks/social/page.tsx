@@ -17,7 +17,12 @@ export default function SocialTasksPage() {
     );
   }
 
-  const socialTasks = TASKS.filter((task) => task.type === 'social');
+  // Filter by type and prerequisite
+  const socialTasks = TASKS.filter(
+    (task) =>
+      task.type === 'social' &&
+      (!task.prerequisite || isTaskCompleted(task.prerequisite))
+  );
 
   return (
     <div className="flex flex-col gap-3">

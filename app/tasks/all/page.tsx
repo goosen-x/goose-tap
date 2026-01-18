@@ -18,10 +18,15 @@ export default function AllTasksPage() {
     );
   }
 
+  // Filter tasks: show only if no prerequisite or prerequisite is completed
+  const availableTasks = TASKS.filter(
+    (task) => !task.prerequisite || isTaskCompleted(task.prerequisite)
+  );
+
   return (
     <div className="flex flex-col gap-3">
       <DailyRewardCard />
-      {TASKS.map((task) => (
+      {availableTasks.map((task) => (
         <TaskCard
           key={task.id}
           task={task}

@@ -18,7 +18,12 @@ export default function DailyTasksPage() {
     );
   }
 
-  const dailyTasks = TASKS.filter((task) => task.type === 'daily' || task.type === 'referral');
+  // Filter by type and prerequisite
+  const dailyTasks = TASKS.filter(
+    (task) =>
+      (task.type === 'daily' || task.type === 'referral') &&
+      (!task.prerequisite || isTaskCompleted(task.prerequisite))
+  );
 
   return (
     <div className="flex flex-col gap-3">
