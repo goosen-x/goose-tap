@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SlidingNumber } from '@/components/ui/sliding-number';
-import { Coins, Clock, TrendingUp, Sparkles, Rocket, Battery } from 'lucide-react';
+import { Clock, TrendingUp, Sparkles, Rocket, Battery } from 'lucide-react';
 import { GooseIcon } from '@/components/ui/goose-icon';
 
 interface UpgradeCardProps {
@@ -17,7 +17,7 @@ interface UpgradeCardProps {
 }
 
 const iconMap: Record<string, React.ReactNode> = {
-  'golden-goose': <Coins className="h-5 w-5" />,
+  'golden-goose': <GooseIcon className="h-5 w-5" />,
   'egg-farm': <Clock className="h-5 w-5" />,
   'golden-egg': <Sparkles className="h-5 w-5" />,
   'goose-nest': <TrendingUp className="h-5 w-5" />,
@@ -45,7 +45,7 @@ export function UpgradeCard({ upgrade, level, coins, onPurchase }: UpgradeCardPr
   return (
     <Card className="flex flex-row items-center gap-3 p-4">
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary">
-        {iconMap[upgrade.id] || <Coins className="h-5 w-5" />}
+        {iconMap[upgrade.id] || <GooseIcon className="h-5 w-5" />}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">

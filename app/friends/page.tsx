@@ -9,7 +9,8 @@ import { Card } from '@/components/ui/card';
 import { SlidingNumber } from '@/components/ui/sliding-number';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { Avatar, AvatarImage, AvatarFallback, AvatarGroup, AvatarGroupCount } from '@/components/ui/avatar';
-import { Users, Copy, UserPlus, Check, Coins } from 'lucide-react';
+import { Users, Copy, UserPlus, Check } from 'lucide-react';
+import { GooseIcon } from '@/components/ui/goose-icon';
 import { toast } from 'sonner';
 import { REFERRAL_BONUSES, REFERRAL_PERCENTAGES } from '@/types/game';
 import { cn } from '@/lib/utils';
@@ -127,7 +128,7 @@ function TierContent({
     <>
       {earnings > 0 && (
         <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/50">
-          <Coins className="w-3.5 h-3.5 text-yellow-500" />
+          <GooseIcon className="w-3.5 h-3.5" />
           <span className="text-xs text-muted-foreground">
             Earned: <span className="text-foreground font-medium">{formatNumber(earnings)}</span>
           </span>
@@ -236,37 +237,44 @@ export default function FriendsPage() {
       {/* Hero Card */}
       <div className="p-4 pb-3">
         <Card className="p-4">
-          <div className="flex items-start justify-between mb-4">
-            <ReferralAvatarStack referrals={[...tier1.referrals, ...tier2.referrals, ...tier3.referrals]} />
-            {totalReferrals === 0 && (
-              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-                <Users className="w-5 h-5 text-muted-foreground" />
-              </div>
-            )}
-          </div>
-
-          <div className="mb-4">
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold">
-                <SlidingNumber value={totalReferrals} />
-              </span>
-              <span className="text-muted-foreground">
-                {totalReferrals === 1 ? 'friend' : 'friends'}
-              </span>
-            </div>
-            {earnings.total > 0 && (
-              <div className="flex items-center gap-1 mt-1">
-                <Coins className="w-4 h-4 text-yellow-500" />
-                <span className="text-sm text-muted-foreground">
-                  <span className="text-foreground font-medium">
-                    <SlidingNumber value={earnings.total} />
-                  </span>
-                  {' '}earned
+          {/* Split layout: Friends | Earned */}
+          <div className="flex gap-4 mb-4">
+            {/* Left: Friends count + avatars */}
+            <div className="flex-1">
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold">
+                  <SlidingNumber value={totalReferrals} />
+                </span>
+                <span className="text-muted-foreground">
+                  {totalReferrals === 1 ? 'friend' : 'friends'}
                 </span>
               </div>
-            )}
+              <div className="mt-2">
+                {totalReferrals > 0 ? (
+                  <ReferralAvatarStack referrals={[...tier1.referrals, ...tier2.referrals, ...tier3.referrals]} />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+                    <Users className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right: Earned */}
+            <div className="flex-1 text-right">
+              <div className="flex items-baseline justify-end gap-2">
+                <span className="text-3xl font-bold">
+                  <SlidingNumber value={earnings.total} />
+                </span>
+              </div>
+              <div className="flex items-center justify-end gap-1 mt-2 text-muted-foreground">
+                <span className="text-sm">earned</span>
+                <GooseIcon className="w-4 h-4" />
+              </div>
+            </div>
           </div>
 
+          {/* Buttons */}
           <div className="flex gap-2">
             <Button onClick={handleInvite} className="flex-1 cursor-pointer">
               <UserPlus className="w-4 h-4 mr-2" />

@@ -4,7 +4,8 @@ import { Referral } from '@/types/game';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SlidingNumber } from '@/components/ui/sliding-number';
-import { User, Coins } from 'lucide-react';
+import { User } from 'lucide-react';
+import { GooseIcon } from '@/components/ui/goose-icon';
 
 interface FriendCardProps {
   friend: Referral;
@@ -28,7 +29,7 @@ export function FriendCard({ friend }: FriendCardProps) {
         </p>
       </div>
       <Badge variant="secondary" className="flex items-center shrink-0">
-        <Coins className="h-3 w-3 mr-1" />
+        <GooseIcon className="h-3 w-3 mr-1" />
         <SlidingNumber value={friend.coins} />
       </Badge>
     </Card>

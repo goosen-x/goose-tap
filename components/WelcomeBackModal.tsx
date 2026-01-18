@@ -11,7 +11,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { SlidingNumber } from '@/components/ui/sliding-number';
-import { Coins } from 'lucide-react';
+import { GooseIcon } from '@/components/ui/goose-icon';
 import Image from 'next/image';
 
 interface WelcomeBackModalProps {
@@ -91,7 +91,7 @@ export function WelcomeBackModal({ earnings, offlineMinutes, coinsPerHour }: Wel
               <div className="flex items-center justify-center gap-2 text-3xl font-bold text-foreground">
                 <span>+</span>
                 <SlidingNumber value={displayEarnings} />
-                <Coins className="h-7 w-7 text-yellow-500" />
+                <GooseIcon className="h-7 w-7" />
               </div>
 
               {/* Passive income info */}
