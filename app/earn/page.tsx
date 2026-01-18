@@ -2,17 +2,20 @@
 
 import { useGame } from '@/components/GameProvider';
 import { UpgradeCard } from '@/components/UpgradeCard';
+import { StickyTabs, TabConfig } from '@/components/StickyTabs';
 import { UPGRADES, calculateUpgradeCost } from '@/types/game';
 import { useTelegram } from '@/hooks/useTelegram';
 import { toast } from 'sonner';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { formatCompact } from '@/lib/storage';
 import { Layers, Rocket, Star, Zap, Clock, Battery } from 'lucide-react';
 import { GooseIcon } from '@/components/ui/goose-icon';
 
-type TabType = 'cards' | 'boosts';
+const TABS: TabConfig[] = [
+  { value: 'cards', label: 'Cards', icon: <Layers className="h-4 w-4" /> },
+  { value: 'boosts', label: 'Boosts', icon: <Rocket className="h-4 w-4" /> },
+];
 
 // Format bonus description
 function formatBonus(bonus: { coinsPerTap?: number; maxEnergy?: number; passiveIncomeMultiplier?: number }): string {
@@ -23,86 +26,21 @@ function formatBonus(bonus: { coinsPerTap?: number; maxEnergy?: number; passiveI
   return parts.join(', ') || 'No bonus';
 }
 
-export default function EarnPage() {
+function EarnHeader() {
   const {
-    coins,
     xp,
     coinsPerTap,
     coinsPerHour,
     maxEnergy,
-    purchaseUpgrade,
-    getUpgradeLevel,
     levelData,
     nextLevelData,
     levelProgress,
-    isLoaded,
   } = useGame();
-  const { hapticNotification } = useTelegram();
-
-  // Show skeleton until data is loaded (prevents hydration mismatch)
-  if (!isLoaded) {
-    return (
-      <div className="flex flex-1 flex-col bg-background overflow-auto">
-        <Card className="mx-4 mt-4 p-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <div className="h-10 w-10 rounded-full bg-secondary animate-pulse" />
-              <div>
-                <div className="h-4 w-16 bg-secondary rounded animate-pulse mb-1" />
-                <div className="h-3 w-12 bg-secondary rounded animate-pulse" />
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="h-4 w-12 bg-secondary rounded animate-pulse mb-1 ml-auto" />
-              <div className="h-3 w-16 bg-secondary rounded animate-pulse ml-auto" />
-            </div>
-          </div>
-          <div className="h-2 w-full bg-secondary rounded animate-pulse" />
-        </Card>
-        <div className="grid grid-cols-3 gap-2 p-4 pb-2">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="p-2 h-16 animate-pulse bg-secondary/50" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  const getFilteredUpgrades = (tab: TabType) => {
-    return UPGRADES.filter((upgrade) => upgrade.category === tab);
-  };
-
-  const handlePurchase = (upgradeId: string) => {
-    const upgrade = UPGRADES.find((u) => u.id === upgradeId);
-    if (!upgrade) return;
-
-    const level = getUpgradeLevel(upgradeId);
-    const cost = calculateUpgradeCost(upgrade, level);
-
-    // Check if at max level
-    if (level >= upgrade.maxLevel) {
-      toast.error('Already at max level');
-      hapticNotification('error');
-      return;
-    }
-
-    // Check if can afford
-    if (coins < cost) {
-      toast.error('Not enough coins');
-      hapticNotification('error');
-      return;
-    }
-
-    const success = purchaseUpgrade(upgradeId);
-    if (success) {
-      hapticNotification('success');
-    }
-  };
 
   return (
-    <div className="flex flex-1 flex-col bg-background overflow-auto">
+    <div className="px-4 pt-4">
       {/* Level Progress */}
-      <Card className="mx-4 mt-4 p-4">
+      <Card className="p-4 mb-2">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
@@ -131,7 +69,7 @@ export default function EarnPage() {
       </Card>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 p-4 pb-2">
+      <div className="grid grid-cols-3 gap-2 pb-2">
         <Card className="p-2 text-center">
           <Zap className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
           <p className="text-[10px] text-muted-foreground">Per tap</p>
@@ -154,39 +92,94 @@ export default function EarnPage() {
           <span className="text-sm font-semibold flex items-center justify-center">{formatCompact(maxEnergy)}</span>
         </Card>
       </div>
+    </div>
+  );
+}
 
-      {/* Tabs and content */}
-      <Tabs defaultValue="cards" className="flex flex-1 flex-col px-4 pb-4">
-        <TabsList className="w-full">
-          <TabsTrigger value="cards" className="flex-1 cursor-pointer">
-            <Layers className="h-4 w-4 mr-1" />
-            Cards
-          </TabsTrigger>
-          <TabsTrigger value="boosts" className="flex-1 cursor-pointer">
-            <Rocket className="h-4 w-4 mr-1" />
-            Boosts
-          </TabsTrigger>
-        </TabsList>
+export default function EarnPage() {
+  const {
+    coins,
+    purchaseUpgrade,
+    getUpgradeLevel,
+    isLoaded,
+  } = useGame();
+  const { hapticNotification } = useTelegram();
 
-        {/* Upgrades list */}
-        <div className="flex-1 pt-4">
-          {(['cards', 'boosts'] as TabType[]).map((tab) => (
-            <TabsContent key={tab} value={tab} className="mt-0">
-              <div className="flex flex-col gap-3">
-                {getFilteredUpgrades(tab).map((upgrade) => (
-                  <UpgradeCard
-                    key={upgrade.id}
-                    upgrade={upgrade}
-                    level={getUpgradeLevel(upgrade.id)}
-                    coins={coins}
-                    onPurchase={() => handlePurchase(upgrade.id)}
-                  />
-                ))}
+  // Show skeleton until data is loaded
+  if (!isLoaded) {
+    return (
+      <div className="flex flex-1 flex-col bg-background overflow-auto">
+        <Card className="mx-4 mt-4 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className="h-10 w-10 rounded-full bg-secondary animate-pulse" />
+              <div>
+                <div className="h-4 w-16 bg-secondary rounded animate-pulse mb-1" />
+                <div className="h-3 w-12 bg-secondary rounded animate-pulse" />
               </div>
-            </TabsContent>
+            </div>
+            <div className="text-right">
+              <div className="h-4 w-12 bg-secondary rounded animate-pulse mb-1 ml-auto" />
+              <div className="h-3 w-16 bg-secondary rounded animate-pulse ml-auto" />
+            </div>
+          </div>
+          <div className="h-2 w-full bg-secondary rounded animate-pulse" />
+        </Card>
+        <div className="grid grid-cols-3 gap-2 p-4 pb-2">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="p-2 h-16 animate-pulse bg-secondary/50" />
           ))}
         </div>
-      </Tabs>
+      </div>
+    );
+  }
+
+  const getFilteredUpgrades = (tab: string) => {
+    return UPGRADES.filter((upgrade) => upgrade.category === tab);
+  };
+
+  const handlePurchase = (upgradeId: string) => {
+    const upgrade = UPGRADES.find((u) => u.id === upgradeId);
+    if (!upgrade) return;
+
+    const level = getUpgradeLevel(upgradeId);
+    const cost = calculateUpgradeCost(upgrade, level);
+
+    if (level >= upgrade.maxLevel) {
+      toast.error('Already at max level');
+      hapticNotification('error');
+      return;
+    }
+
+    if (coins < cost) {
+      toast.error('Not enough coins');
+      hapticNotification('error');
+      return;
+    }
+
+    const success = purchaseUpgrade(upgradeId);
+    if (success) {
+      hapticNotification('success');
+    }
+  };
+
+  return (
+    <div className="flex flex-1 flex-col bg-background">
+      <StickyTabs tabs={TABS} defaultValue="cards" header={<EarnHeader />}>
+        {(activeTab) => (
+          <div className="flex flex-col gap-3">
+            {getFilteredUpgrades(activeTab).map((upgrade) => (
+              <UpgradeCard
+                key={upgrade.id}
+                upgrade={upgrade}
+                level={getUpgradeLevel(upgrade.id)}
+                coins={coins}
+                onPurchase={() => handlePurchase(upgrade.id)}
+              />
+            ))}
+          </div>
+        )}
+      </StickyTabs>
     </div>
   );
 }

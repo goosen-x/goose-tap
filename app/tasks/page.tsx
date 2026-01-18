@@ -3,18 +3,22 @@
 import { useGame } from '@/components/GameProvider';
 import { TaskCard } from '@/components/TaskCard';
 import { DailyRewardCard } from '@/components/DailyReward';
+import { StickyTabs, TabConfig } from '@/components/StickyTabs';
 import { TASKS } from '@/types/game';
 import { useTelegram } from '@/hooks/useTelegram';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ListTodo, Calendar, Share2 } from 'lucide-react';
 
-type FilterType = 'all' | 'daily' | 'social';
+const TABS: TabConfig[] = [
+  { value: 'all', label: 'All', icon: <ListTodo className="h-4 w-4" /> },
+  { value: 'daily', label: 'Daily', icon: <Calendar className="h-4 w-4" /> },
+  { value: 'social', label: 'Social', icon: <Share2 className="h-4 w-4" /> },
+];
 
 export default function TasksPage() {
   const { completeTask, isTaskCompleted, getTaskProgress, isLoaded } = useGame();
   const { webApp } = useTelegram();
 
-  // Show skeleton until data is loaded (prevents hydration mismatch)
+  // Show skeleton until data is loaded
   if (!isLoaded) {
     return (
       <div className="flex flex-1 flex-col bg-background p-4">
@@ -38,7 +42,7 @@ export default function TasksPage() {
     }
   };
 
-  const getFilteredTasks = (filter: FilterType) => {
+  const getFilteredTasks = (filter: string) => {
     return TASKS.filter((task) => {
       if (filter === 'all') return true;
       if (filter === 'daily') return task.type === 'daily' || task.type === 'referral';
@@ -48,54 +52,33 @@ export default function TasksPage() {
 
   return (
     <div className="flex flex-1 flex-col bg-background">
-      {/* Tabs and content */}
-      <Tabs defaultValue="all" className="flex flex-1 flex-col p-4">
-        <TabsList className="w-full">
-          <TabsTrigger value="all" className="flex-1 cursor-pointer">
-            <ListTodo className="h-4 w-4 mr-1" />
-            All
-          </TabsTrigger>
-          <TabsTrigger value="daily" className="flex-1 cursor-pointer">
-            <Calendar className="h-4 w-4 mr-1" />
-            Daily
-          </TabsTrigger>
-          <TabsTrigger value="social" className="flex-1 cursor-pointer">
-            <Share2 className="h-4 w-4 mr-1" />
-            Social
-          </TabsTrigger>
-        </TabsList>
+      <StickyTabs tabs={TABS} defaultValue="all">
+        {(activeTab) => (
+          <div className="flex flex-col gap-3">
+            {/* Daily Reward Card - show on all and daily tabs */}
+            {(activeTab === 'all' || activeTab === 'daily') && (
+              <DailyRewardCard />
+            )}
 
-        {/* Task list */}
-        <div className="flex-1 pt-4">
-          {(['all', 'daily', 'social'] as FilterType[]).map((filter) => (
-            <TabsContent key={filter} value={filter} className="mt-0">
-              <div className="flex flex-col gap-3">
-                {/* Daily Reward Card - show on all and daily tabs */}
-                {(filter === 'all' || filter === 'daily') && (
-                  <DailyRewardCard />
-                )}
+            {getFilteredTasks(activeTab).map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                isCompleted={isTaskCompleted(task.id)}
+                progress={task.requirement ? getTaskProgress(task.id) : undefined}
+                onComplete={() => completeTask(task.id)}
+                onAction={() => handleAction(task.action)}
+              />
+            ))}
 
-                {getFilteredTasks(filter).map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    isCompleted={isTaskCompleted(task.id)}
-                    progress={task.requirement ? getTaskProgress(task.id) : undefined}
-                    onComplete={() => completeTask(task.id)}
-                    onAction={() => handleAction(task.action)}
-                  />
-                ))}
+            {getFilteredTasks(activeTab).length === 0 && (
+              <div className="mt-12 text-center text-muted-foreground">
+                No tasks available
               </div>
-
-              {getFilteredTasks(filter).length === 0 && (
-                <div className="mt-12 text-center text-muted-foreground">
-                  No tasks available
-                </div>
-              )}
-            </TabsContent>
-          ))}
-        </div>
-      </Tabs>
+            )}
+          </div>
+        )}
+      </StickyTabs>
     </div>
   );
 }
