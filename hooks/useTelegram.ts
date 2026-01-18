@@ -93,6 +93,13 @@ function isHapticSupported(webApp: ReturnType<typeof getWebApp>): boolean {
   return version >= 6.1;
 }
 
+// Check if CloudStorage is supported (requires version 6.9+)
+function isCloudStorageSupported(webApp: ReturnType<typeof getWebApp>): boolean {
+  if (!webApp) return false;
+  const version = parseFloat(webApp.version || '0');
+  return version >= 6.9 && !!webApp.CloudStorage;
+}
+
 export function useTelegram() {
   const webApp = useSyncExternalStore(subscribe, getWebApp, getServerSnapshot);
 
@@ -108,6 +115,13 @@ export function useTelegram() {
       // Disable vertical swipes to prevent collapse and ensure full height (Bot API 7.7+)
       if (tg.disableVerticalSwipes) {
         tg.disableVerticalSwipes();
+      }
+
+      // Request fullscreen mode for immersive experience (Bot API 8.0+)
+      // This removes Telegram's header/footer for games and tap-based apps
+      const version = parseFloat(tg.version || '0');
+      if (version >= 8.0 && tg.requestFullscreen) {
+        tg.requestFullscreen();
       }
 
       isInitialized = true;
@@ -135,6 +149,52 @@ export function useTelegram() {
       // Fallback for development or unsupported versions
       window.open(url, '_blank');
     }
+  }, [webApp]);
+
+  // CloudStorage methods for backup saving
+  const cloudStorageSet = useCallback((key: string, value: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (webApp && isCloudStorageSupported(webApp)) {
+        webApp.CloudStorage?.setItem(key, value, (error, stored) => {
+          if (error) {
+            console.warn('[CloudStorage] setItem error:', error);
+            resolve(false);
+          } else {
+            resolve(stored);
+          }
+        });
+      } else {
+        // Fallback to localStorage in dev
+        try {
+          localStorage.setItem(`cloud_${key}`, value);
+          resolve(true);
+        } catch {
+          resolve(false);
+        }
+      }
+    });
+  }, [webApp]);
+
+  const cloudStorageGet = useCallback((key: string): Promise<string | null> => {
+    return new Promise((resolve) => {
+      if (webApp && isCloudStorageSupported(webApp)) {
+        webApp.CloudStorage?.getItem(key, (error, value) => {
+          if (error) {
+            console.warn('[CloudStorage] getItem error:', error);
+            resolve(null);
+          } else {
+            resolve(value || null);
+          }
+        });
+      } else {
+        // Fallback to localStorage in dev
+        try {
+          resolve(localStorage.getItem(`cloud_${key}`));
+        } catch {
+          resolve(null);
+        }
+      }
+    });
   }, [webApp]);
 
   // In development without valid Telegram data, use mock data
@@ -176,5 +236,9 @@ export function useTelegram() {
     isHapticSupported: isHapticSupported(webApp),
     // Navigation
     openTelegramLink,
+    // CloudStorage for backup saving
+    cloudStorageSet,
+    cloudStorageGet,
+    isCloudStorageSupported: isCloudStorageSupported(webApp),
   };
 }
