@@ -51,9 +51,8 @@ export default function TasksPage() {
   };
 
   return (
-    <div className="flex flex-1 flex-col bg-background">
-      <StickyTabs tabs={TABS} defaultValue="all">
-        {(activeTab) => (
+    <StickyTabs tabs={TABS} defaultValue="all" className="bg-background">
+      {(activeTab) => (
           <div className="flex flex-col gap-3">
             {/* Daily Reward Card - show on all and daily tabs */}
             {(activeTab === 'all' || activeTab === 'daily') && (
@@ -77,8 +76,7 @@ export default function TasksPage() {
               </div>
             )}
           </div>
-        )}
-      </StickyTabs>
-    </div>
+      )}
+    </StickyTabs>
   );
 }

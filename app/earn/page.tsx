@@ -164,22 +164,20 @@ export default function EarnPage() {
   };
 
   return (
-    <div className="flex flex-1 flex-col bg-background">
-      <StickyTabs tabs={TABS} defaultValue="cards" header={<EarnHeader />}>
-        {(activeTab) => (
-          <div className="flex flex-col gap-3">
-            {getFilteredUpgrades(activeTab).map((upgrade) => (
-              <UpgradeCard
-                key={upgrade.id}
-                upgrade={upgrade}
-                level={getUpgradeLevel(upgrade.id)}
-                coins={coins}
-                onPurchase={() => handlePurchase(upgrade.id)}
-              />
-            ))}
-          </div>
-        )}
-      </StickyTabs>
-    </div>
+    <StickyTabs tabs={TABS} defaultValue="cards" header={<EarnHeader />} className="bg-background">
+      {(activeTab) => (
+        <div className="flex flex-col gap-3">
+          {getFilteredUpgrades(activeTab).map((upgrade) => (
+            <UpgradeCard
+              key={upgrade.id}
+              upgrade={upgrade}
+              level={getUpgradeLevel(upgrade.id)}
+              coins={coins}
+              onPurchase={() => handlePurchase(upgrade.id)}
+            />
+          ))}
+        </div>
+      )}
+    </StickyTabs>
   );
 }

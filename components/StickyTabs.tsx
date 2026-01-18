@@ -22,7 +22,7 @@ export function StickyTabs({ tabs, defaultValue, header, children, className }: 
   const [activeTab, setActiveTab] = useState(defaultValue ?? tabs[0]?.value ?? '');
 
   return (
-    <div className={cn('flex flex-1 flex-col min-h-0 overflow-auto', className)}>
+    <div className={cn('flex flex-col', className)}>
       {/* Optional header that scrolls with content */}
       {header}
 
@@ -52,7 +52,7 @@ export function StickyTabs({ tabs, defaultValue, header, children, className }: 
       </div>
 
       {/* Tab content */}
-      <div className="flex-1 px-4 pb-4">
+      <div className="px-4 pb-4">
         {children(activeTab)}
       </div>
     </div>
