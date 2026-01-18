@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { formatCompact } from '@/lib/storage';
+import { GooseIcon } from '@/components/ui/goose-icon';
 
 interface LeaderboardCardProps {
   entry: LeaderboardEntry;
@@ -68,8 +69,9 @@ export function LeaderboardCard({ entry, isCurrentUser }: LeaderboardCardProps) 
       </div>
 
       {/* Coins */}
-      <div className="text-right shrink-0">
+      <div className="flex items-center gap-1 shrink-0">
         <span className="font-semibold">{formatCompact(entry.coins)}</span>
+        <GooseIcon className="h-4 w-4" />
       </div>
     </Card>
   );

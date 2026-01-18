@@ -8,8 +8,9 @@ import { toast } from 'sonner';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { SlidingNumber } from '@/components/ui/sliding-number';
+import { formatCompact } from '@/lib/storage';
 import { Layers, Rocket, Star, Zap, Clock, Battery } from 'lucide-react';
+import { GooseIcon } from '@/components/ui/goose-icon';
 
 type TabType = 'cards' | 'boosts';
 
@@ -113,10 +114,10 @@ export default function EarnPage() {
             </div>
           </div>
           <div className="text-right">
-            <span className="text-sm font-medium flex items-center justify-end gap-1"><SlidingNumber value={xp} /> XP</span>
+            <span className="text-sm font-medium flex items-center justify-end gap-1">{formatCompact(xp)} XP</span>
             {nextLevelData && (
               <span className="text-xs text-muted-foreground flex items-center justify-end gap-1">
-                <SlidingNumber value={nextLevelData.xpRequired} /> next
+                {formatCompact(nextLevelData.xpRequired)} next
               </span>
             )}
           </div>
@@ -134,17 +135,23 @@ export default function EarnPage() {
         <Card className="p-2 text-center">
           <Zap className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
           <p className="text-[10px] text-muted-foreground">Per tap</p>
-          <span className="text-sm font-semibold flex items-center justify-center">+<SlidingNumber value={coinsPerTap} /></span>
+          <span className="text-sm font-semibold flex items-center justify-center gap-0.5">
+            +{formatCompact(coinsPerTap)}
+            <GooseIcon className="h-3 w-3" />
+          </span>
         </Card>
         <Card className="p-2 text-center">
           <Clock className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
           <p className="text-[10px] text-muted-foreground">Per hour</p>
-          <span className="text-sm font-semibold flex items-center justify-center">+<SlidingNumber value={coinsPerHour} /></span>
+          <span className="text-sm font-semibold flex items-center justify-center gap-0.5">
+            +{formatCompact(coinsPerHour)}
+            <GooseIcon className="h-3 w-3" />
+          </span>
         </Card>
         <Card className="p-2 text-center">
           <Battery className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
           <p className="text-[10px] text-muted-foreground">Max energy</p>
-          <span className="text-sm font-semibold flex items-center justify-center"><SlidingNumber value={maxEnergy} /></span>
+          <span className="text-sm font-semibold flex items-center justify-center">{formatCompact(maxEnergy)}</span>
         </Card>
       </div>
 

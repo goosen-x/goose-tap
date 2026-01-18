@@ -1,12 +1,13 @@
 'use client';
 
 import { Upgrade, calculateUpgradeCost } from '@/types/game';
-import { formatNumber } from '@/lib/storage';
+import { formatCompact } from '@/lib/storage';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SlidingNumber } from '@/components/ui/sliding-number';
 import { Coins, Clock, TrendingUp, Sparkles, Rocket, Battery } from 'lucide-react';
+import { GooseIcon } from '@/components/ui/goose-icon';
 
 interface UpgradeCardProps {
   upgrade: Upgrade;
@@ -35,9 +36,9 @@ export function UpgradeCard({ upgrade, level, coins, onPurchase }: UpgradeCardPr
       case 'tap':
         return `+${bonus}/tap`;
       case 'hour':
-        return `+${formatNumber(bonus)}/hour`;
+        return `+${formatCompact(bonus)}/hour`;
       case 'energy':
-        return `+${bonus} max`;
+        return `+${formatCompact(bonus)} max`;
     }
   };
 
@@ -74,8 +75,8 @@ export function UpgradeCard({ upgrade, level, coins, onPurchase }: UpgradeCardPr
             disabled={!canAfford}
             className="cursor-pointer"
           >
-            <Coins className="h-3 w-3 mr-1" />
-            <SlidingNumber value={cost} />
+            {formatCompact(cost)}
+            <GooseIcon className="h-3.5 w-3.5 ml-1" />
           </Button>
         )}
       </div>
