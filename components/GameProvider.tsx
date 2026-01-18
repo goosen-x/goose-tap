@@ -31,6 +31,7 @@ export function GameProvider({ children }: GameProviderProps) {
       <DevPanel
         state={gameState.isLoaded ? {
           coins: gameState.coins,
+          totalEarnings: gameState.totalEarnings,
           xp: gameState.xp,
           energy: gameState.energy,
           maxEnergy: gameState.maxEnergy,

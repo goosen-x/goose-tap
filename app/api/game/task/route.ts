@@ -128,6 +128,7 @@ export async function POST(request: Request) {
     // Check if level changed and recalculate stats
     let updateData: Parameters<typeof updateUserState>[1] = {
       coins: state.coins + task.reward,
+      totalEarnings: state.totalEarnings + task.reward,
       xp: newXP,
       tasks: newTasks,
     };

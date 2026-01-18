@@ -131,6 +131,7 @@ export async function POST(request: Request) {
     const { rows } = await sql<DbUser>`
       UPDATE users SET
         coins = coins + ${reward.coins},
+        total_earnings = total_earnings + ${reward.coins},
         xp = xp + ${reward.xp},
         daily_streak = ${newStreak},
         last_daily_claim = NOW(),

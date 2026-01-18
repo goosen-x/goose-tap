@@ -9,6 +9,7 @@ export interface DbUser {
   first_name: string | null;
   photo_url: string | null;
   coins: number;
+  total_earnings: number;
   xp: number;
   energy: number;
   max_energy: number;
@@ -50,6 +51,7 @@ export function dbRowToGameState(row: DbUser): GameState {
 
   return {
     coins: Number(row.coins),
+    totalEarnings: Number(row.total_earnings) || 0,
     xp,
     energy: row.energy,
     maxEnergy: row.max_energy,
@@ -185,6 +187,7 @@ async function processReferralBonus(referrerId: number, newUser: DbUser): Promis
         UPDATE users SET
           referrals = ${JSON.stringify(updatedReferrals)}::jsonb,
           coins = coins + ${REFERRAL_BONUSES.tier1},
+          total_earnings = total_earnings + ${REFERRAL_BONUSES.tier1},
           updated_at = NOW()
         WHERE telegram_id = ${t1}
       `;
@@ -196,6 +199,7 @@ async function processReferralBonus(referrerId: number, newUser: DbUser): Promis
       await sql`
         UPDATE users SET
           coins = coins + ${REFERRAL_BONUSES.tier2},
+          total_earnings = total_earnings + ${REFERRAL_BONUSES.tier2},
           updated_at = NOW()
         WHERE telegram_id = ${t2}
       `;
@@ -207,6 +211,7 @@ async function processReferralBonus(referrerId: number, newUser: DbUser): Promis
       await sql`
         UPDATE users SET
           coins = coins + ${REFERRAL_BONUSES.tier3},
+          total_earnings = total_earnings + ${REFERRAL_BONUSES.tier3},
           updated_at = NOW()
         WHERE telegram_id = ${t3}
       `;
@@ -230,6 +235,7 @@ export async function updateUserState(
   const { rows } = await sql<DbUser>`
     UPDATE users SET
       coins = COALESCE(${state.coins ?? null}, coins),
+      total_earnings = COALESCE(${state.totalEarnings ?? null}, total_earnings),
       xp = COALESCE(${state.xp ?? null}, xp),
       energy = COALESCE(${state.energy ?? null}, energy),
       max_energy = COALESCE(${state.maxEnergy ?? null}, max_energy),
@@ -260,6 +266,7 @@ export async function atomicTap(
   const { rows } = await sql<DbUser>`
     UPDATE users SET
       coins = coins + ${coinsPerTap},
+      total_earnings = total_earnings + ${coinsPerTap},
       xp = xp + ${xpPerTap},
       energy = energy - 1,
       total_taps = total_taps + 1,
@@ -292,6 +299,7 @@ export async function atomicBatchTap(
     WITH tapper AS (
       UPDATE users SET
         coins = coins + ${totalCoins},
+        total_earnings = total_earnings + ${totalCoins},
         xp = xp + ${taps * xpPerTap},
         energy = energy - ${taps},
         total_taps = total_taps + ${taps},
@@ -305,6 +313,11 @@ export async function atomicBatchTap(
     referral_update AS (
       UPDATE users SET
         coins = coins + CASE
+          WHEN telegram_id = (SELECT referrer_t1 FROM tapper) THEN ${t1Share}
+          WHEN telegram_id = (SELECT referrer_t2 FROM tapper) THEN ${t2Share}
+          WHEN telegram_id = (SELECT referrer_t3 FROM tapper) THEN ${t3Share}
+          ELSE 0 END,
+        total_earnings = total_earnings + CASE
           WHEN telegram_id = (SELECT referrer_t1 FROM tapper) THEN ${t1Share}
           WHEN telegram_id = (SELECT referrer_t2 FROM tapper) THEN ${t2Share}
           WHEN telegram_id = (SELECT referrer_t3 FROM tapper) THEN ${t3Share}

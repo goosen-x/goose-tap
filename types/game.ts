@@ -164,6 +164,7 @@ export const DAILY_REWARDS: DailyReward[] = [
 // Game state
 export interface GameState {
   coins: number;
+  totalEarnings: number;
   xp: number;
   energy: number;
   maxEnergy: number;
@@ -186,6 +187,7 @@ export interface GameState {
 // Default game state
 export const DEFAULT_GAME_STATE: GameState = {
   coins: 0,
+  totalEarnings: 0,
   xp: 0,
   energy: 1000,
   maxEnergy: 1000,

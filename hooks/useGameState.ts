@@ -43,6 +43,7 @@ export interface UseGameStateOptions {
 
 export interface UseGameStateResult {
   coins: number;
+  totalEarnings: number;
   xp: number;
   energy: number;
   maxEnergy: number;

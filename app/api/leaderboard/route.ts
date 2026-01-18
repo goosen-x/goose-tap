@@ -26,12 +26,14 @@ export async function GET(request: Request) {
     // Get top players with pagination
     // Use subquery to ensure ROW_NUMBER calculates global rank before pagination
     // Dev user only visible in development mode
+    // Sorted by total_earnings (lifetime earnings, only goes up)
     const { rows: leaderboardRows } = await sql<{
       telegram_id: number;
       first_name: string | null;
       username: string | null;
       photo_url: string | null;
       coins: number;
+      total_earnings: number;
       level: number;
       rank: number;
     }>`
@@ -42,10 +44,11 @@ export async function GET(request: Request) {
           username,
           photo_url,
           coins,
+          COALESCE(total_earnings, 0) as total_earnings,
           level,
-          ROW_NUMBER() OVER (ORDER BY coins DESC) as rank
+          ROW_NUMBER() OVER (ORDER BY COALESCE(total_earnings, 0) DESC) as rank
         FROM users
-        WHERE coins > 0 AND (${IS_DEV} OR telegram_id != ${DEV_USER_ID})
+        WHERE COALESCE(total_earnings, 0) > 0 AND (${IS_DEV} OR telegram_id != ${DEV_USER_ID})
       ) ranked
       ORDER BY rank
       LIMIT ${limit + 1}
@@ -56,14 +59,14 @@ export async function GET(request: Request) {
     const hasMore = leaderboardRows.length > limit;
     const results = hasMore ? leaderboardRows.slice(0, limit) : leaderboardRows;
 
-    // Map to LeaderboardEntry
+    // Map to LeaderboardEntry (coins field now shows totalEarnings for display)
     const leaderboard: LeaderboardEntry[] = results.map((row) => ({
       rank: Number(row.rank),
       telegramId: row.telegram_id,
       firstName: row.first_name || 'Anonymous',
       username: row.username,
       photoUrl: row.photo_url || null,
-      coins: Number(row.coins),
+      coins: Number(row.total_earnings),
       level: row.level,
     }));
 
@@ -73,12 +76,12 @@ export async function GET(request: Request) {
     if (currentTelegramId) {
       const { rows: userRows } = await sql<{
         rank: number;
-        coins: number;
+        total_earnings: number;
         level: number;
       }>`
         SELECT
-          (SELECT COUNT(*) + 1 FROM users WHERE coins > u.coins AND (${IS_DEV} OR telegram_id != ${DEV_USER_ID})) as rank,
-          u.coins,
+          (SELECT COUNT(*) + 1 FROM users WHERE COALESCE(total_earnings, 0) > COALESCE(u.total_earnings, 0) AND (${IS_DEV} OR telegram_id != ${DEV_USER_ID})) as rank,
+          COALESCE(u.total_earnings, 0) as total_earnings,
           u.level
         FROM users u
         WHERE u.telegram_id = ${currentTelegramId}
@@ -87,7 +90,7 @@ export async function GET(request: Request) {
       if (userRows.length > 0) {
         currentUser = {
           rank: Number(userRows[0].rank),
-          coins: Number(userRows[0].coins),
+          coins: Number(userRows[0].total_earnings),
           level: userRows[0].level,
         };
       }
@@ -95,7 +98,7 @@ export async function GET(request: Request) {
 
     // Get total players count (dev user only in development)
     const { rows: countRows } = await sql<{ total: number }>`
-      SELECT COUNT(*) as total FROM users WHERE coins > 0 AND (${IS_DEV} OR telegram_id != ${DEV_USER_ID})
+      SELECT COUNT(*) as total FROM users WHERE COALESCE(total_earnings, 0) > 0 AND (${IS_DEV} OR telegram_id != ${DEV_USER_ID})
     `;
     const totalPlayers = Number(countRows[0]?.total || 0);
 
