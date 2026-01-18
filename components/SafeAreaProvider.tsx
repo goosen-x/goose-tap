@@ -25,9 +25,9 @@ export function SafeAreaProvider({ children }: { children: React.ReactNode }) {
     const screenHeight = window.innerHeight;
 
     // Calculate safe area top:
-    // 1. If Telegram provides contentSafeAreaInset.top > 0, use it
+    // 1. If Telegram provides contentSafeAreaInset.top > 0, use it (Bot API 8.0+)
     // 2. If in fullscreen mode, use only system safe area (notch)
-    // 3. If not in fullscreen and no contentSafeAreaInset, use fallback for Telegram header
+    // 3. If not in fullscreen and no contentSafeAreaInset, use fixed fallback
     let safeTop = 0;
     let safeBottom = 0;
 
@@ -41,10 +41,9 @@ export function SafeAreaProvider({ children }: { children: React.ReactNode }) {
       safeBottom = safeAreaInset.bottom;
     } else {
       // Non-fullscreen mode without contentSafeAreaInset:
-      // Use workaround: screenHeight - viewportStableHeight gives us the Telegram UI height
-      // Fallback to TELEGRAM_HEADER_FALLBACK if calculation gives 0
-      const calculatedTop = screenHeight - viewportStableHeight;
-      safeTop = calculatedTop > 0 ? calculatedTop : TELEGRAM_HEADER_FALLBACK;
+      // Use fixed fallback for Telegram header (~56px on iOS)
+      // Note: The workaround calc(100vh - viewportStableHeight) is for BOTTOM, not top
+      safeTop = 0; // Telegram header is OUTSIDE our WebView, no padding needed
       safeBottom = safeAreaInset.bottom;
     }
 
