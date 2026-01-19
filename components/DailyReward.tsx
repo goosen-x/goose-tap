@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SlidingNumber } from '@/components/ui/sliding-number';
-import { Gift, Clock, Sparkles } from 'lucide-react';
+import { Gift, Clock, Check } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { GooseIcon } from '@/components/ui/goose-icon';
 import { XpIcon } from '@/components/icons/XpIcon';
@@ -113,16 +113,17 @@ export function DailyRewardDrawer({ open, onOpenChange }: DailyRewardProps) {
             // Success state
             <div className="py-6 text-center">
               <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-green-500/20">
-                <Sparkles className="h-10 w-10 text-green-500" />
+                <Check className="h-10 w-10 text-green-500" />
               </div>
               <h3 className="text-xl font-bold mb-2">Reward Claimed!</h3>
-              <div className="flex items-center justify-center gap-4 text-lg">
+              <div className="flex flex-col items-center gap-1 text-lg">
                 <span className="flex items-center gap-1">
-                  <GooseIcon className="h-5 w-5" />
                   +<SlidingNumber value={claimedReward.coins} />
+                  <GooseIcon className="h-4 w-4" />
                 </span>
-                <span className="text-muted-foreground flex items-center gap-1">
-                  +<SlidingNumber value={claimedReward.xp} /> <XpIcon className="w-4 h-4" />
+                <span className="flex items-center gap-1">
+                  +<SlidingNumber value={claimedReward.xp} />
+                  <XpIcon className="h-4 w-4" />
                 </span>
               </div>
               {claimedReward.bonus && (
@@ -143,13 +144,16 @@ export function DailyRewardDrawer({ open, onOpenChange }: DailyRewardProps) {
                 canClaimDailyReward && "ring-2 ring-primary bg-primary/5"
               )}>
                 <p className="text-sm text-muted-foreground mb-2">Today's Reward</p>
-                <div className="flex items-center justify-center gap-2 text-3xl font-bold">
-                  <GooseIcon className="h-8 w-8" />
-                  <SlidingNumber value={currentDailyReward.coins} />
+                <div className="flex flex-col items-center gap-1">
+                  <span className="flex items-center gap-2 text-3xl font-bold">
+                    +<SlidingNumber value={currentDailyReward.coins} />
+                    <GooseIcon className="h-6 w-6" />
+                  </span>
+                  <span className="flex items-center gap-1 text-lg">
+                    +{currentDailyReward.xp}
+                    <XpIcon className="h-4 w-4" />
+                  </span>
                 </div>
-                <p className="text-sm text-muted-foreground mt-1 flex items-center justify-center gap-1">
-                  +{currentDailyReward.xp} <XpIcon className="w-4 h-4" />
-                </p>
               </Card>
 
               {/* Progress Dots */}
@@ -281,12 +285,12 @@ export function DailyRewardCard() {
     <>
       <Card
         className={cn(
-          'p-4 cursor-pointer transition-colors',
+          'p-4 gap-2 cursor-pointer transition-colors',
           canClaimDailyReward && 'ring-2 ring-primary bg-primary/5'
         )}
         onClick={() => setDialogOpen(true)}
       >
-        {/* Row 1: Icon, Title, Reward, Action */}
+        {/* Row 1: Icon, Title, Action */}
         <div className="flex items-center gap-3">
           <div
             className={cn(
@@ -301,10 +305,6 @@ export function DailyRewardCard() {
             <h3 className="font-medium">Daily Reward</h3>
           </div>
 
-          <Badge variant="secondary" className="shrink-0">
-            +<SlidingNumber value={currentDailyReward.coins} />
-          </Badge>
-
           <Button
             size="sm"
             variant={canClaimDailyReward ? 'default' : 'secondary'}
@@ -318,8 +318,20 @@ export function DailyRewardCard() {
           </Button>
         </div>
 
-        {/* Row 2: Progress dots, Day counter, Streak/Timer */}
-        <div className="flex items-center gap-3 mt-1 ml-[52px]">
+        {/* Row 2: Rewards */}
+        <div className="ml-[52px] flex items-center gap-2">
+          <Badge variant="secondary" className="flex items-center gap-1">
+            +<SlidingNumber value={currentDailyReward.coins} />
+            <GooseIcon className="h-3 w-3" />
+          </Badge>
+          <Badge variant="outline" className="flex items-center gap-1">
+            +<SlidingNumber value={currentDailyReward.xp} />
+            <XpIcon className="h-3 w-3 ml-0" />
+          </Badge>
+        </div>
+
+        {/* Row 3: Progress dots, Day counter, Streak/Timer */}
+        <div className="flex items-center gap-3 ml-[52px]">
           <DaysProgress current={daysCompleted} total={7} />
 
           <span className="text-xs text-muted-foreground">

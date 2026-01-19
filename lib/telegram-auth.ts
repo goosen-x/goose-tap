@@ -56,8 +56,6 @@ export async function validateInitData(initData: string): Promise<ValidationResu
 async function validateWithSignature(initData: string): Promise<ValidationResult> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
 
-  console.log('[Auth] validateWithSignature called');
-
   if (!botToken) {
     console.error('[Auth] Bot token not configured');
     return { valid: false, error: 'Bot token not configured' };
@@ -65,13 +63,21 @@ async function validateWithSignature(initData: string): Promise<ValidationResult
 
   // Extract bot ID from token (format: BOT_ID:SECRET)
   const botId = parseInt(botToken.split(':')[0], 10);
-  console.log('[Auth] Bot ID:', botId);
+
+  // Log initData structure (without sensitive data)
+  const params = new URLSearchParams(initData);
+  console.log('[Auth] Validating signature:', {
+    botId,
+    hasSignature: params.has('signature'),
+    hasHash: params.has('hash'),
+    authDate: params.get('auth_date'),
+    signatureLength: params.get('signature')?.length,
+  });
 
   try {
     // Try production environment first, then test
     for (const isTest of [false, true]) {
       try {
-        console.log('[Auth] Trying validate3rd with test:', isTest);
         await validate3rd(initData, botId, {
           expiresIn: 6 * 60 * 60, // 6 hours
           test: isTest,
@@ -80,12 +86,25 @@ async function validateWithSignature(initData: string): Promise<ValidationResult
         console.log('[Auth] validate3rd SUCCESS with test:', isTest);
         return extractUserFromInitData(initData);
       } catch (e) {
-        console.log('[Auth] validate3rd failed for test:', isTest, 'error:', e instanceof Error ? e.message : e);
+        const errMsg = e instanceof Error ? e.message : String(e);
+        console.log('[Auth] validate3rd failed:', { test: isTest, error: errMsg });
         continue;
       }
     }
 
-    console.error('[Auth] Signature verification failed for both environments');
+    // Signature failed - try hash-based validation as fallback
+    console.log('[Auth] Signature failed, trying hash fallback...');
+    try {
+      validate(initData, botToken, {
+        expiresIn: 6 * 60 * 60,
+      });
+      console.log('[Auth] Hash validation SUCCESS');
+      return extractUserFromInitData(initData);
+    } catch (hashError) {
+      console.log('[Auth] Hash fallback also failed:', hashError instanceof Error ? hashError.message : hashError);
+    }
+
+    console.error('[Auth] All validation methods failed');
     return { valid: false, error: 'Invalid signature' };
   } catch (error) {
     console.error('[Auth] Signature validation error:', error);

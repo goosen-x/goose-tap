@@ -33,8 +33,25 @@ export async function POST(request: Request) {
 
     const { user } = validation;
 
-    // Update user state in database
-    const dbUser = await updateUserState(user.id, state);
+    // IMPORTANT: Don't allow client to overwrite server-managed fields:
+    // - dailyTaps, lastDailyTapsReset, tasks - managed by loadGame reset logic
+    // - totalTaps - managed by atomicTap/atomicBatchTap
+    // - referrals, referralEarnings - managed by server-side referral processing
+    const safeState: Partial<GameState> = {
+      coins: state.coins,
+      xp: state.xp,
+      energy: state.energy,
+      maxEnergy: state.maxEnergy,
+      coinsPerTap: state.coinsPerTap,
+      coinsPerHour: state.coinsPerHour,
+      level: state.level,
+      upgrades: state.upgrades,
+      lastEnergyUpdate: state.lastEnergyUpdate,
+      lastOfflineEarnings: state.lastOfflineEarnings,
+    };
+
+    // Update user state in database (with safe fields only)
+    const dbUser = await updateUserState(user.id, safeState);
 
     if (!dbUser) {
       return NextResponse.json(

@@ -220,7 +220,24 @@ export async function saveGame(
       return { success: false, error: validation.error || 'Invalid initData' }
     }
 
-    const dbUser = await updateUserState(validation.user.id, state)
+    // IMPORTANT: Don't allow client to overwrite server-managed fields:
+    // - dailyTaps, lastDailyTapsReset, tasks - managed by loadGame reset logic
+    // - totalTaps - managed by atomicTap/atomicBatchTap
+    // - referrals, referralEarnings - managed by server-side referral processing
+    const safeState: Partial<GameState> = {
+      coins: state.coins,
+      xp: state.xp,
+      energy: state.energy,
+      maxEnergy: state.maxEnergy,
+      coinsPerTap: state.coinsPerTap,
+      coinsPerHour: state.coinsPerHour,
+      level: state.level,
+      upgrades: state.upgrades,
+      lastEnergyUpdate: state.lastEnergyUpdate,
+      lastOfflineEarnings: state.lastOfflineEarnings,
+    }
+
+    const dbUser = await updateUserState(validation.user.id, safeState)
     if (!dbUser) {
       return { success: false, error: 'User not found' }
     }
@@ -435,9 +452,7 @@ export async function completeTask(
       return { success: false, error: 'User not found' }
     }
 
-    console.log('[completeTask] dbUser.daily_taps:', dbUser.daily_taps)
     const state = dbRowToGameState(dbUser)
-    console.log('[completeTask] state.dailyTaps:', state.dailyTaps, 'taskId:', taskId)
 
     // Check if task already claimed
     const existingTask = state.tasks.find((t) => t.taskId === taskId)
@@ -498,12 +513,6 @@ export async function completeTask(
 
       // Daily tap tasks - use dailyTaps
       if (taskId.startsWith('daily-tap-')) {
-        console.log('[completeTask] Daily tap check:', {
-          taskId,
-          requirement: task.requirement,
-          dailyTaps: state.dailyTaps,
-          passes: state.dailyTaps >= task.requirement
-        })
         if (state.dailyTaps < task.requirement) {
           return { success: false, error: 'Daily tap requirement not met' }
         }
