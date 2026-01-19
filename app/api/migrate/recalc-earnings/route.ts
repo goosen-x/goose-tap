@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 
-// Upgrade definitions (copy from types/game.ts to avoid import issues)
+// Upgrade definitions (includes both current and legacy upgrades for recalculation)
 const UPGRADES = [
-  { id: 'golden-goose', baseCost: 1000, costMultiplier: 1.5 },
-  { id: 'egg-farm', baseCost: 2000, costMultiplier: 1.6 },
+  // Current upgrades (v2 - multiplier x2)
+  { id: 'golden-goose', baseCost: 1000, costMultiplier: 2 },
+  { id: 'egg-farm', baseCost: 2000, costMultiplier: 2 },
+  { id: 'energy-drink', baseCost: 1000, costMultiplier: 2 },
+  { id: 'turbo-tap', baseCost: 10000, costMultiplier: 2 },
+  // Legacy upgrades (v1 - for users who bought before migration)
   { id: 'golden-egg', baseCost: 5000, costMultiplier: 1.7 },
   { id: 'goose-nest', baseCost: 3000, costMultiplier: 1.5 },
-  { id: 'energy-drink', baseCost: 1500, costMultiplier: 1.4 },
-  { id: 'turbo-tap', baseCost: 10000, costMultiplier: 2.0 },
 ];
 
 // Calculate total cost spent on an upgrade to reach a certain level
